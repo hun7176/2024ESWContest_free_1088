@@ -9,7 +9,8 @@ import tensorflow as tf
 
 class BirdDetector:
     def __init__(self):
-        # ROS 노드 초기화
+        # ROS 노드 초기화 
+        #7월 25일 00시 43분
         rospy.init_node('bird_detector', anonymous=True)
 
         # CvBridge 객체 생성
