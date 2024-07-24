@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -16,15 +16,17 @@ class BirdDetector:
         self.bridge = CvBridge()
 
         # 카메라 이미지 구독(수정 필요)
-        self.image_sub = rospy.Subscriber('/camera/image_raw', Image, self.callback)
+        self.image_sub = rospy.Subscriber('/usb_cam/image_raw', Image, self.callback)
 
         # TensorFlow 모델 로드
         self.detection_model = self.load_model()
 
     def load_model(self):
         # 모델 파일 경로 설정(수정 필요)
-        model_path = '/home/curie/catkin_ws/src/bird_alert/bird_camera/bird_detection/models/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8/saved_model'
-        model = tf.saved_model.load(model_path)
+        script_dir = os.path.dirname(__file__)  # 현재 스크립트가 위치한 디렉토리
+        model_dir = os.path.join(script_dir, '..', 'models', 'ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8', 'saved_model')
+        model_dir = os.path.abspath(model_dir)
+        model = tf.saved_model.load(model_dir)
         return model
 
     def callback(self, data):
