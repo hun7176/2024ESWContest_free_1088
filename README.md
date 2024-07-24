@@ -1,5 +1,5 @@
 
-# 2024 bitdol <bird alert project> V1.2
+# 2024 bitdol <bird alert project> V1.3
 
 ## 프로젝트 설명
 이 레포지토리는 팀원분들이 새로 작성하신 패키지들을 업로드 하는 레포지토리입니다.  
