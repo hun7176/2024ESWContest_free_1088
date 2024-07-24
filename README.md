@@ -2,20 +2,20 @@
 
 ## 프로젝트 설명
 이 레포지토리는 팀원분들이 새로 작성하신 패키지들을 업로드 하는 레포지토리입니다. 
-본 레포지토리는 `catkin_ws/src` 디렉토리 내의 특정 폴더들을 제외하고 관리됩니다. 
-예를들어, /turtlebot, /turtlebot3_autorace_2020, /turtlebot3_msgs, /DynamixelSDK, /ld08_driver 패키지는 팀원들 모두 src 폴더에 있을 것이기 때문에 이 폴더들은 제외하고 공유됩니다.
+본 레포지토리는 `catkin_ws\/src` 디렉토리 내의 특정 폴더들을 제외하고 관리됩니다. 
+예를들어, \/turtlebot, \/turtlebot3_autorace_2020, \/turtlebot3_msgs, \/DynamixelSDK, \/ld08_driver 패키지는 팀원들 모두 src 폴더에 있을 것이기 때문에 이 폴더들은 제외하고 공유됩니다.
 
 ## 사전 지식
 
 명확한 분업을 위하여 지정된 한 폴더 내에서만 작성하는 것을 권장합니다.
 만약 여러개의 패키지를 만들고 싶다 하면 
-catkin_ws/
-├── src/
-│   ├── bird_camera/
-│   │   ├── bird_detection/
-│   │   ├── bird_picamera_on/
-│   │   └── my_package_name/
-│   └── bird_turret/
+catkin_ws\/
+├── src\/
+│   ├── bird_camera\/
+│   │   ├── bird_detection\/
+│   │   ├── bird_picamera_on\/
+│   │   └── my_package_name\/
+│   └── bird_turret\/
 └── CMakeLists.txt
 
 이런식으로 제가 지정해준 폴더 내에 여러 패키지를 만들어주시면 됩니다.
@@ -24,21 +24,21 @@ catkin_ws/
 ## 레포지토리 지정폴더
 이 레포지토리에 지정된 폴더 내에 여러분들이 작성하신 패키지들을 저장해주시길 바랍니다.
 <규리>
-/bird_camera
+\/bird_camera
 
 <승헌 기웅>
-/bird_turret
+\/bird_turret
 
 <상훈 재웅>
-/bird_autodriving
+\/bird_autodriving
 
 이 폴더 내부에 패키지를 넣어주시면 됩니다. 그런 후에 지정폴더를 공유해주시면 됩니다.
 
 ### 레포지토리 클론 및 워크스페이스 설정 방법
 
-1. `catkin_ws/src` 디렉토리로 이동합니다.
+1. `catkin_ws\/src` 디렉토리로 이동합니다.
 
-    cd ~/catkin_ws/src
+    cd ~\/catkin_ws\/src
 
 2. 레포지토리를 클론합니다.
 
@@ -46,15 +46,15 @@ catkin_ws/
 
 3. `catkin_ws` 디렉토리로 이동합니다.
 
-    cd ~/catkin_ws
+    cd ~\/catkin_ws
 
 4. `catkin_ws` 디렉토리에서 catkin 워크스페이스를 빌드합니다. (새로운 패키지를 다운받으면 이를 실행시키기 위하여 빌드를 해주어야합니다.)
 
     catkin_make
 
-5. 환경 설정을 적용합니다.(여러분의 pc에 이 명령어가 bashrc에 추가되어 있을 것이기 때문에 source ~/.bashrc해주어도 됩니다.)
+5. 환경 설정을 적용합니다.(여러분의 pc에 이 명령어가 bashrc에 추가되어 있을 것이기 때문에 source ~\/.bashrc해주어도 됩니다.)
 
-    source devel/setup.bash
+    source devel\/setup.bash
 
 ### ROS 패키지 실행
 
@@ -69,7 +69,7 @@ roslaunch bird_detection my_bird_detection.launch (이 런치파일 안에는 �
 ***********************************************************************************************************************************************************************
 ### 코드를 깃허브에서 다운로드하는 방법
 1. **프로젝트를 처음 시작할때**
-	https://github.com/hun7176/bird_alert.git
+	https:\/\/github.com\/hun7176\/bird_alert.git
 		
 목적: 원격 저장소(깃허브)의 전체 내용을 로컬 컴퓨터(내컴퓨터)에 복제합니다.
 사용 시점: 프로젝트를 처음 시작할 때, 또는 새로운 작업 환경을 설정할 때 사용합니다. 즉, 원격 저장소의 복사본을 처음부터 끝까지 로컬로 가져옵니다.
@@ -88,7 +88,7 @@ roslaunch bird_detection my_bird_detection.launch (이 런치파일 안에는 �
 1. **변경 사항 추가하기**
    작업한 디렉토리로 이동하여 변경된 파일을 스테이징합니다.
 
-   cd ~/catkin_ws/src/
+   cd ~\/catkin_ws\/src\/
    git add .
 	
 
@@ -122,7 +122,7 @@ roslaunch bird_detection my_bird_detection.launch (이 런치파일 안에는 �
 
 1. 작업한 디렉토리로 이동
 
-   cd ~/catkin_ws/src
+   cd ~\/catkin_ws\/src
 
 2. 변경된 파일 스테이징
 
@@ -162,13 +162,13 @@ roslaunch bird_detection my_bird_detection.launch (이 런치파일 안에는 �
 2.
  .gitignore 파일 내에 업로드 하지 않을 폴더를  추가해 주어도 됩니다.
 
-   cd ~/catkin_ws/src
+   cd ~\/catkin_ws\/src
    nano .gitignore
 
-DynamixelSDK/
-turtlebot3/
-turtlebot3_msgs/
-ld08_driver/
-turtlebot3_autorace_2020/
+DynamixelSDK\/
+turtlebot3\/
+turtlebot3_msgs\/
+ld08_driver\/
+turtlebot3_autorace_2020\/
 
 
