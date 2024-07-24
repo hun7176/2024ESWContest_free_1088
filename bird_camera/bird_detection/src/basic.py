@@ -18,7 +18,7 @@ class BirdDetector:
 
         # 카메라 이미지 구독(수정 필요)
         self.image_sub = rospy.Subscriber('/usb_cam/image_raw', Image, self.callback)
-
+        self.image_pub = rospy.Publisher('/bird_detector/image_with_boxes', Image, queue_size=10)
         # TensorFlow 모델 로드
         self.detection_model = self.load_model()
 
@@ -59,8 +59,13 @@ class BirdDetector:
                     cv2.rectangle(cv_image, (int(left), int(top)), (int(right), int(bottom)), (255, 0, 0), 2)
 
             # 결과 이미지 표시
-            cv2.imshow("Bird Detection", cv_image)
-            cv2.waitKey(3)
+            #cv2.imshow("Bird Detection", cv_image)
+            #cv2.waitKey(3)
+
+            image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
+            self.image_pub.publish(image_message)
+
+
         except Exception as e:
             rospy.logerr(f"Exception in callback: {e}")
 
