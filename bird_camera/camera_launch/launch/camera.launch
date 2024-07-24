@@ -9,7 +9,7 @@
 
     <!-- Bird Detection Node -->
     <node name="bird_detector" pkg="bird_detection" type="basic.py" output="screen">
-        <param name="model_path" value="/home/curie/catkin_ws/src/bird_camera/bird_detection/models/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8/saved_model"/>
+        <param name="model_path" value="/home/curie/catkin_ws/src/bird_alert/bird_camera/bird_detection/models/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8/saved_model"/>
     </node>
 </launch>
 

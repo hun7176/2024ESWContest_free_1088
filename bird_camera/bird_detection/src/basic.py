@@ -16,14 +16,14 @@ class BirdDetector:
         self.bridge = CvBridge()
 
         # 카메라 이미지 구독(수정 필요)
-        self.image_sub = rospy.Subscriber('/camera/image', Image, self.callback)
+        self.image_sub = rospy.Subscriber('/camera/image_raw', Image, self.callback)
 
         # TensorFlow 모델 로드
         self.detection_model = self.load_model()
 
     def load_model(self):
         # 모델 파일 경로 설정(수정 필요)
-        model_path = '/home/curie/catkin_ws/src/bird_detection/models/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8/saved_model'
+        model_path = '/home/curie/catkin_ws/src/bird_alert/bird_camera/bird_detection/models/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8/saved_model'
         model = tf.saved_model.load(model_path)
         return model
 
