@@ -54,12 +54,12 @@ class Core():
 
         #self.fnLaunch(self.launch_bird_autodriving_decide, True)
 
-    def cbObstacleStamped(self, intersection_msg):
-        rospy.loginfo("intersection Step changed from %d", self.current_step_intersection)
-        self.current_step_intersection = intersection_msg.data
+    def cbObstacleStamped(self, obstacle_msg):
+        rospy.loginfo("obstacle Step changed from %d", self.current_step_obstacle)
+        self.current_step_obstacle = obstacle_msg.data
 
-        if self.current_step_intersection == self.StepOfIntersection.exit.value:
-            self.current_mode = self.CurrentMode.lane_following.value
+        if self.current_step_obstacle == self.StepOfObstacle.exit.value:
+            self.current_mode = self.CurrentMode.autodrive_mode.value
             msg_mode_return = UInt8()
             msg_mode_return.data = self.current_mode
             self.pub_mode_return.publish(msg_mode_return)
