@@ -57,7 +57,8 @@ class Core():
                 self.fnControlNode()
             
             loop_rate.sleep()
-        
+
+    # 받은 데이터로 현재 모드 변경
     def cbReceiveMode(self, mode_msg):
         rospy.loginfo("mode is decided")
 
