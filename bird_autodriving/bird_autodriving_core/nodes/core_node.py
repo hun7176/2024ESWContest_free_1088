@@ -11,18 +11,22 @@ from sensor_msgs.msg import Image
 
 class Core():
     def __init__(self):
+        # 패키지 경로 현재 경로로 설정
         self.ros_package_path = os.path.dirname(os.path.realpath(__file__))
         self.ros_package_path = self.ros_package_path.replace('bird_autodriving_core/nodes', '')
 
         # subscribes : status returned
         self.sub_mode_control = rospy.Subscriber('/core/decided_mode', UInt8, self.cbReceiveMode, queue_size=1)
         self.sub_obstacle_stamped = rospy.Subscriber('/detect/obstacle_stamped', UInt8, self.cbObstacleStamped, queue_size=1)
-
+        self.sub_road_stamped = rospy.Subscriber('/detect/road_stamped', UInt8, self.cbRoadStamped, queue_size=1)
+        
         # publishes orders
-        self.pub_intersection_order = rospy.Publisher('/detect/intersection_order', UInt8, queue_size=1)
+        self.pub_obstacle_order = rospy.Publisher('/detect/obstacle_order', UInt8, queue_size=1)
+        self.pub_road_order = rospy.Publisher('/detect/road_order', UInt8, queue_size=1)
         self.pub_mode_return = rospy.Publisher('/core/returned_mode', UInt8, queue_size=1)
 
-        self.CurrentMode = Enum('CurrentMode', 'idle autodrive_mode shooting_mode obstale')
+        # 열거형 정의 (현재 모드, 활주로 단계, 장애물 단계, 런처)
+        self.CurrentMode = Enum('CurrentMode', 'idle autodrive_mode shooting_mode obstale_mode')
         self.current_mode = self.CurrentMode.idle.value
 
         self.StepOfRoad = Enum('StepOfRoad', 'avoid_road exit')
@@ -32,17 +36,25 @@ class Core():
         self.current_step_road = self.StepOfObstacle.exit.value        
 
         self.Launcher = Enum('Launcher', 'launch_camera_ex_calib launch_detect_road launch_detect_obstacle launch_control_straight launch_control_avoid launch_control_pause' )
-        self.launch_bird_autodriving_decide = False
         self.uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
 
-        self.bird_detected = False
+        # launch status 초기화
+        self.launch_camera_launched = False
+        self.launch_detect_road_launched = False
+        self.launch_detect_obstacle_launched = False
+        self.launch_control_straight_launched = False
+        self.launch_control_avoid_launched = False
+        self.launch_control_pause_launched = False
+
+        # Ros 노드 동작 여부 초기화
         self.is_triggered = False
 
+        # 노드가 종료될 때까지 초당 10회 루프하며 노드 컨트롤
         loop_rate = rospy.Rate(10) # 10hz
         while not rospy.is_shutdown():
             print("i'm working")
             if self.is_triggered == True:
-                self.fnLaunch()
+                self.fnControlNode()
             
             loop_rate.sleep()
         
