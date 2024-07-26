@@ -58,19 +58,19 @@ class Core():
             
             loop_rate.sleep()
 
-    # 받은 데이터로 현재 모드 변경
+    # 받은 데이터로 현재 모드 변경(decide_mode 노드에서 기본적으로 autodriving_mode라고 보내주거나 Current_mode를 autodriving_mode로 설정해야 될 것 같음)
+    # 아니면 triggered가 안됐을 때(장애물o, 활주로o) 안 움직일 수 있음
     def cbReceiveMode(self, mode_msg):
         rospy.loginfo("mode is decided")
 
         self.current_mode = mode_msg.data
         self.is_triggered = True
 
-        #self.fnLaunch(self.launch_bird_autodriving_decide, True)
-
-    def cbObstacleStamped(self, obstacle_msg):
+    # 장애물 모드 변경 / exit면 자율주행 모드로 변경, 현재 모드(자율주행) 상태 재전파
+    def cbObstacleStamped(self, obstacle_msg):  
         rospy.loginfo("obstacle Step changed from %d", self.current_step_obstacle)
         self.current_step_obstacle = obstacle_msg.data
-
+        
         if self.current_step_obstacle == self.StepOfObstacle.exit.value:
             self.current_mode = self.CurrentMode.autodrive_mode.value
             msg_mode_return = UInt8()
@@ -79,6 +79,20 @@ class Core():
         
         self.is_triggered = True
 
+    # 활주로 모드 변경 / exit면 자율주행 모드로 변경, 현재 모드(자율주행) 상태 재전파
+    def cbRoadStamped(self, road_msg):  
+        rospy.loginfo("road Step changed from %d", self.current_step_road)
+        self.current_step_road = road_msg.data
+
+        if self.current_step_road == self.StepOfRoad.exit.value:
+            self.current_mode = self.CurrentMode.autodrive_mode.value
+            msg_mode_return = UInt8()
+            msg_mode_return.data = self.current_mode
+            self.pub_mode_return.publish(msg_mode_return)
+        
+        self.is_triggered = True
+
+    # 현재 모드에 따른 런치파일 실행 및 종료
     def fnControlNode(self):
         # autodrive_mode 
         if self.current_mode == self.CurrentMode.autodrive_mode.value:
@@ -94,6 +108,8 @@ class Core():
         elif self.current_mode == self.CurrentMode.shooting_mode.value:
             rospy.loginfo("New trigger for shooting_mode")
             msg_pub_intersection_order = UInt8()
+
+
 
             if self.current_step_intersection == self.StepOfIntersection.detect_direction.value:
                 rospy.loginfo("Current step : searching_intersection_sign")
