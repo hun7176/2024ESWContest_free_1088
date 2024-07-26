@@ -18,19 +18,14 @@ class Core():
         # subscribes : status returned
         self.sub_mode_control = rospy.Subscriber('/core/decided_mode', UInt8, self.cbReceiveMode, queue_size=1)
         self.sub_obstacle_stamped = rospy.Subscriber('/detect/obstacle_stamped', UInt8, self.cbObstacleStamped, queue_size=1)
-        self.sub_road_stamped = rospy.Subscriber('/detect/road_stamped', UInt8, self.cbRoadStamped, queue_size=1)
         
         # publishes orders
         self.pub_obstacle_order = rospy.Publisher('/detect/obstacle_order', UInt8, queue_size=1)
-        self.pub_road_order = rospy.Publisher('/detect/road_order', UInt8, queue_size=1)
         self.pub_mode_return = rospy.Publisher('/core/returned_mode', UInt8, queue_size=1)
 
         # 열거형 정의 (현재 모드, 활주로 단계, 장애물 단계, 런처)
         self.CurrentMode = Enum('CurrentMode', 'idle autodrive_mode shooting_mode obstale_mode')
         self.current_mode = self.CurrentMode.idle.value
-
-        self.StepOfRoad = Enum('StepOfRoad', 'avoid_road exit')
-        self.current_step_road = self.StepOfRoad.exit.value
 
         self.StepOfObstacle = Enum('StepOfObstacle', 'avoid_obstacle exit')
         self.current_step_road = self.StepOfObstacle.exit.value        
