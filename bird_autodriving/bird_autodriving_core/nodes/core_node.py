@@ -58,8 +58,7 @@ class Core():
             
             loop_rate.sleep()
 
-    # 받은 데이터로 현재 모드 변경(decide_mode 노드에서 기본적으로 autodriving_mode라고 보내주거나 Current_mode를 autodriving_mode로 설정해야 될 것 같음)
-    # 아니면 triggered가 안됐을 때(장애물o, 활주로o) 안 움직일 수 있음
+    # 받은 데이터로 현재 모드 변경
     def cbReceiveMode(self, mode_msg):
         rospy.loginfo("mode is decided")
 
@@ -94,7 +93,7 @@ class Core():
 
     # 현재 모드에 따른 런치파일 실행 및 종료
     def fnControlNode(self):
-        # autodrive_mode 
+        # autodrive_mode (카메라, 도로 및 장애물 감지, 직진)
         if self.current_mode == self.CurrentMode.autodrive_mode.value:
             rospy.loginfo("New trigger for autodrive_mode")
             self.fnLaunch(self.Launcher.launch_camera_ex_calib.value, True)
@@ -104,7 +103,7 @@ class Core():
 
             self.fnLaunch(self.Launcher.launch_control_straight.value, True)
 
-        # shooting_mode
+        # shooting_mode (멈춤, 현재 모드(shootiong) 재전파)
         elif self.current_mode == self.CurrentMode.shooting_mode.value:
             rospy.loginfo("New trigger for shooting_mode")
             msg_pub_intersection_order = UInt8()
