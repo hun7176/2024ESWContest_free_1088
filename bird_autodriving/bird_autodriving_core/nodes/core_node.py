@@ -106,17 +106,15 @@ class Core():
             elif self.current_step_obstacle == self.StepOfObstacle.exit.value:
                 rospy.loginfo("Current step : exit")
 
-                msg_pub_intersection_order.data = self.StepOfIntersection.exit.value
-
-                self.fnLaunch(self.Launcher.launch_detect_lane.value, True)
-                self.fnLaunch(self.Launcher.launch_detect_sign.value, True)
-                self.fnLaunch(self.Launcher.launch_detect_intersection.value, False)
-               
-                self.fnLaunch(self.Launcher.launch_control_lane.value, True)
-                self.fnLaunch(self.Launcher.launch_control_moving.value, False)
+                msg_pub_obstacle_order.data = self.StepOfObstacle.exit.value
+                
+                self.fnLaunch(self.Launcher.launch_camera_ex_calib.value, True)
+                self.fnLaunch(self.Launcher.launch_detect_road.value, True)
+                self.fnLaunch(self.Launcher.launch_detect_obstacle.value, True)
+                self.fnLaunch(self.Launcher.launch_control_moving.value, True)
 
             rospy.sleep(3)
-            self.pub_intersection_order.publish(msg_pub_intersection_order)
+            self.pub_obstacle_order.publish(msg_pub_obstacle_order)
 
     def fnLaunch(self, launch_num, is_start):
         if launch_num == self.launch_bird_autodriving_decide:
