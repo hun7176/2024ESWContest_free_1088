@@ -1,0 +1,9 @@
+<launch>
+    <!-- ROS Master -->
+    <arg name="roscore" default="true"/>
+    
+<node pkg="bird_turret" type="rasptostm.py" name="rasptostm" output="screen"/>
+</launch>
+
+
+
