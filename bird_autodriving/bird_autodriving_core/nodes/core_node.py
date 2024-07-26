@@ -30,16 +30,14 @@ class Core():
         self.StepOfObstacle = Enum('StepOfObstacle', 'avoid_obstacle exit')
         self.current_step_road = self.StepOfObstacle.exit.value        
 
-        self.Launcher = Enum('Launcher', 'launch_camera_ex_calib launch_detect_road launch_detect_obstacle launch_control_straight launch_control_avoid launch_control_pause' )
+        self.Launcher = Enum('Launcher', 'launch_camera_ex_calib launch_detect_road launch_detect_obstacle launch_control_moving' )
         self.uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
 
         # launch status 초기화
         self.launch_camera_launched = False
         self.launch_detect_road_launched = False
         self.launch_detect_obstacle_launched = False
-        self.launch_control_straight_launched = False
-        self.launch_control_avoid_launched = False
-        self.launch_control_pause_launched = False
+        self.launch_control_moving_launched = False
 
         # Ros 노드 동작 여부 초기화
         self.is_triggered = False
@@ -73,52 +71,39 @@ class Core():
         
         self.is_triggered = True
 
-    # 활주로 모드 변경 / exit면 자율주행 모드로 변경, 현재 모드(자율주행) 상태 재전파
-    def cbRoadStamped(self, road_msg):  
-        rospy.loginfo("road Step changed from %d", self.current_step_road)
-        self.current_step_road = road_msg.data
-
-        if self.current_step_road == self.StepOfRoad.exit.value:
-            self.current_mode = self.CurrentMode.autodrive_mode.value
-            msg_mode_return = UInt8()
-            msg_mode_return.data = self.current_mode
-            self.pub_mode_return.publish(msg_mode_return)
-        
-        self.is_triggered = True
-
     # 현재 모드에 따른 런치파일 실행 및 종료
     def fnControlNode(self):
         # autodrive_mode (카메라, 도로 및 장애물 감지, 직진)
         if self.current_mode == self.CurrentMode.autodrive_mode.value:
             rospy.loginfo("New trigger for autodrive_mode")
             self.fnLaunch(self.Launcher.launch_camera_ex_calib.value, True)
-
             self.fnLaunch(self.Launcher.launch_detect_road.value, True)
             self.fnLaunch(self.Launcher.launch_detect_obstacle.value, True)
-
-            self.fnLaunch(self.Launcher.launch_control_straight.value, True)
+            self.fnLaunch(self.Launcher.launch_control_moving.value, True)
 
         # shooting_mode (멈춤, 현재 모드(shootiong) 재전파)
         elif self.current_mode == self.CurrentMode.shooting_mode.value:
             rospy.loginfo("New trigger for shooting_mode")
-            msg_pub_intersection_order = UInt8()
 
 
+        # obstacle_mode (장애물 회피)
+        elif self.current_mode == self.CurrentMode.obstacle_mode.value:
+            rospy.loginfo("New trigger for obstacle_mode")
+            # 장애물 명령을 내리기 위한 메시지 객체 생성
+            msg_pub_obstacle_order = UInt8()
 
-            if self.current_step_intersection == self.StepOfIntersection.detect_direction.value:
-                rospy.loginfo("Current step : searching_intersection_sign")
+            if self.current_step_obstacle == self.StepOfObstacle.avoid_obstacle.value:
+                rospy.loginfo("Current step : avoid_obstacle")
                 rospy.loginfo("Go to next step : exit")
 
-                msg_pub_intersection_order.data = self.StepOfIntersection.detect_direction.value
+                msg_pub_obstacle_order.data = self.StepOfObstacle.avoid_obstacle.value
 
-                self.fnLaunch(self.Launcher.launch_detect_lane.value, True)
-                self.fnLaunch(self.Launcher.launch_detect_sign.value, True)
-                self.fnLaunch(self.Launcher.launch_detect_intersection.value, True)
-
-                self.fnLaunch(self.Launcher.launch_control_lane.value, True)
+                self.fnLaunch(self.Launcher.launch_camera_ex_calib.value, True)
+                self.fnLaunch(self.Launcher.launch_detect_road.value, True)
+                self.fnLaunch(self.Launcher.launch_detect_obstacle.value, True)
                 self.fnLaunch(self.Launcher.launch_control_moving.value, True)
               
-            elif self.current_step_intersection == self.StepOfIntersection.exit.value:
+            elif self.current_step_obstacle == self.StepOfObstacle.exit.value:
                 rospy.loginfo("Current step : exit")
 
                 msg_pub_intersection_order.data = self.StepOfIntersection.exit.value
