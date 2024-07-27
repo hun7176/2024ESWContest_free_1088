@@ -2,12 +2,12 @@
 import rospy
 from geometry_msgs.msg import Point
 import serial
-
+1
 class UART_START:
     def __init__(self):
         rospy.init_node('rasptostm', anonymous=True)
         self.coordinate_sub = rospy.Subscriber('/burd_turret/coordinates', Point, self.callback)
-        self.ser = serial.Serial("/dev/ttyAMA2", baudrate=115200, timeout=1)
+        self.ser = serial.Serial("/dev/ttyACM0", baudrate=115200, timeout=1)
         rospy.on_shutdown(self.cleanup)
 
     def callback(self, data):
