@@ -97,6 +97,8 @@ class CoreModeDecider():
 		    rospy.loginfo("detect bird")
             else:
                 pass
+	    self.fnPublishMode()
+
         else:
             pass
 
