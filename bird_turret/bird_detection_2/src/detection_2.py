@@ -37,11 +37,15 @@ class BirdDetector:
         self.ki = 0.01
         self.kd = 0.05
 
+        # 중심과의 거리가 얼마 이내일 때 색을 변경할지 설정
+        self.proximity_threshold = 50  # 픽셀 단위 거리
+
     def load_model(self):
         # 모델 파일 경로 설정(수정 필요)
         script_dir = os.path.dirname(__file__)  # 현재 스크립트가 위치한 디렉토리
         model_dir = os.path.join(script_dir, '..', 'models', 'ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8', 'saved_model')
         model_dir = os.path.abspath(model_dir)
+        rospy.loginfo(f"Loading model from {model_dir}")
         model = tf.saved_model.load(model_dir)
         return model
 
@@ -78,11 +82,10 @@ class BirdDetector:
             image_center_x = cv_image.shape[1] // 2
             image_center_y = cv_image.shape[0] // 2
 
-            # 중앙에 흰색 십자 그리기
-            cv2.line(cv_image, (image_center_x - 50, image_center_y), (image_center_x + 50, image_center_y), (255, 255, 255), 2)
-            cv2.line(cv_image, (image_center_x, image_center_y - 50), (image_center_x, image_center_y + 50), (255, 255, 255), 2)
-
             detected = False
+            cross_color = (255, 255, 255)  # 기본 색상은 흰색
+            show_shoot_text = False  # shoot 텍스트 표시 여부
+            angle_msg = Vector3()  # 초기화
 
             # 이미지에서 감지된 새를 그리기 및 정보 추가
             for i in range(num_detections):
@@ -118,23 +121,36 @@ class BirdDetector:
                     self.prev_error_x = error_x
                     self.prev_error_y = error_y
 
-                    # PID 제어 결과 퍼블리시
-                    angle_msg = Vector3()
-                    angle_msg.x = control_theta
-                    angle_msg.y = control_phi
-                    angle_msg.z = 0.0  # 사용하지 않는 z 축은 0.0으로 설정
-                    self.angle_pub.publish(angle_msg)
+                    # 물체가 중심에 가까운지 확인
+                    if abs(error_x) < self.proximity_threshold and abs(error_y) < self.proximity_threshold:
+                        cross_color = (0, 0, 255)  # 빨간색으로 변경
+                        show_shoot_text = True  # shoot 텍스트 표시
+                        angle_msg.z = 1.0  # z값을 1로 설정
+                        rospy.loginfo("shoot!!!")
+                    else:
+                        angle_msg.z = 0.0
 
                     detected = True
                     break
 
             if not detected:
                 # 객체가 감지되지 않은 경우 제어 신호를 0으로 설정
-                angle_msg = Vector3()
                 angle_msg.x = 0.0
                 angle_msg.y = 0.0
                 angle_msg.z = 0.0
-                self.angle_pub.publish(angle_msg)
+            else:
+                # PID 제어 결과 퍼블리시
+                angle_msg.x = control_theta
+                angle_msg.y = control_phi
+            self.angle_pub.publish(angle_msg)
+
+            # 중심에 흰색 또는 빨간색 십자 그리기
+            cv2.line(cv_image, (image_center_x - 50, image_center_y), (image_center_x + 50, image_center_y), cross_color, 2)
+            cv2.line(cv_image, (image_center_x, image_center_y - 50), (image_center_x, image_center_y + 50), cross_color, 2)
+
+            # shoot 텍스트 표시
+            if show_shoot_text:
+                cv2.putText(cv_image, 'shoot!!', (image_center_x - 100, image_center_y - 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
 
             image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
             self.image_pub.publish(image_message)
