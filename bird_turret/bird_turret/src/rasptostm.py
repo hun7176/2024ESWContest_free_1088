@@ -2,7 +2,7 @@
 import rospy
 from geometry_msgs.msg import Point
 import serial
-1
+
 class UART_START:
     def __init__(self):
         rospy.init_node('rasptostm', anonymous=True)
