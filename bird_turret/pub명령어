@@ -1,0 +1,1 @@
+rostopic pub -1 /burd_turret/coordinates geometry_msgs/Point "{x: 1.0, y: 2.0, z: 3.0}"
