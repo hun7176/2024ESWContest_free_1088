@@ -2,7 +2,7 @@
 import os
 import rospy
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float64
+from geometry_msgs.msg import Vector3
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -21,8 +21,7 @@ class BirdDetector:
         self.image_pub = rospy.Publisher('/bird_detection_2/image_with_boxes', Image, queue_size=10)
 
         # PID 제어 결과 퍼블리셔
-        self.theta_pub = rospy.Publisher('/bird_detection_2/theta', Float64, queue_size=10)
-        self.phi_pub = rospy.Publisher('/bird_detection_2/phi', Float64, queue_size=10)
+        self.angle_pub = rospy.Publisher('/bird_detection_2/angles', Vector3, queue_size=10)
 
         # TensorFlow 모델 로드
         self.detection_model = self.load_model()
@@ -78,8 +77,10 @@ class BirdDetector:
             # 중심점 계산
             image_center_x = cv_image.shape[1] // 2
             image_center_y = cv_image.shape[0] // 2
-            cv2.rectangle(cv_image, (image_center_x - 50, image_center_y - 50), 
-                          (image_center_x + 50, image_center_y + 50), (0, 255, 0), 2)
+
+            # 중앙에 흰색 십자 그리기
+            cv2.line(cv_image, (image_center_x - 50, image_center_y), (image_center_x + 50, image_center_y), (255, 255, 255), 2)
+            cv2.line(cv_image, (image_center_x, image_center_y - 50), (image_center_x, image_center_y + 50), (255, 255, 255), 2)
 
             detected = False
 
@@ -118,16 +119,22 @@ class BirdDetector:
                     self.prev_error_y = error_y
 
                     # PID 제어 결과 퍼블리시
-                    self.theta_pub.publish(Float64(data=control_theta))
-                    self.phi_pub.publish(Float64(data=control_phi))
+                    angle_msg = Vector3()
+                    angle_msg.x = control_theta
+                    angle_msg.y = control_phi
+                    angle_msg.z = 0.0  # 사용하지 않는 z 축은 0.0으로 설정
+                    self.angle_pub.publish(angle_msg)
 
                     detected = True
                     break
 
             if not detected:
                 # 객체가 감지되지 않은 경우 제어 신호를 0으로 설정
-                self.theta_pub.publish(Float64(data=0.0))
-                self.phi_pub.publish(Float64(data=0.0))
+                angle_msg = Vector3()
+                angle_msg.x = 0.0
+                angle_msg.y = 0.0
+                angle_msg.z = 0.0
+                self.angle_pub.publish(angle_msg)
 
             image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
             self.image_pub.publish(image_message)
