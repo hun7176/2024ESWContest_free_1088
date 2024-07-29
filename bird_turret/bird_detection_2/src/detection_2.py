@@ -20,10 +20,6 @@ class BirdDetector:
         self.image_sub = rospy.Subscriber('/usb_cam/image_raw', Image, self.callback)
         self.image_pub = rospy.Publisher('/bird_detection_2/image_with_boxes', Image, queue_size=10)
 
-        # 에러 퍼블리셔
-        self.error_x_pub = rospy.Publisher('/bird_detection_2/error_x', Float64, queue_size=10)
-        self.error_y_pub = rospy.Publisher('/bird_detection_2/error_y', Float64, queue_size=10)
-
         # PID 제어 결과 퍼블리셔
         self.theta_pub = rospy.Publisher('/bird_detection_2/theta', Float64, queue_size=10)
         self.phi_pub = rospy.Publisher('/bird_detection_2/phi', Float64, queue_size=10)
@@ -104,11 +100,14 @@ class BirdDetector:
                     text = f'ID: {class_ids[i]}, Score: {scores[i]:.2f}'
                     cv2.putText(cv_image, text, (int(left), int(top) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
                     
-                    # 중심점 에러 계산 및 퍼블리시
+                    # 중심점 에러 계산 및 콘솔 출력
                     error_x = center_x - image_center_x
                     error_y = center_y - image_center_y
-                    self.error_x_pub.publish(Float64(data=error_x))
-                    self.error_y_pub.publish(Float64(data=error_y))
+                    rospy.loginfo(f"Error X: {error_x}, Error Y: {error_y}")
+
+                    # 에러 값을 이미지에 표시
+                    error_text = f'Error X: {error_x}, Error Y: {error_y}'
+                    cv2.putText(cv_image, error_text, (10, cv_image.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
                     # PID 제어
                     control_theta, self.integral_x = self.pid_control(error_x, self.prev_error_x, self.integral_x)
@@ -126,9 +125,7 @@ class BirdDetector:
                     break
 
             if not detected:
-                # 객체가 감지되지 않은 경우 에러를 0으로 설정
-                self.error_x_pub.publish(Float64(data=0.0))
-                self.error_y_pub.publish(Float64(data=0.0))
+                # 객체가 감지되지 않은 경우 제어 신호를 0으로 설정
                 self.theta_pub.publish(Float64(data=0.0))
                 self.phi_pub.publish(Float64(data=0.0))
 
