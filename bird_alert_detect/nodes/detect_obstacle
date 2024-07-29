@@ -45,31 +45,31 @@ class DetectIntersection():
         self.is_lidar_obstacle_detected = False
         self.is_camera_road_detected = False
 
-    def cbInvokedByTrafficSign(self, obstacle_type_msg):    
-        if self.is_intersection_detected == True:
-            if obstacle_type_msg.data == self.TrafficSign.left.value:
-                self.is_left_detected = True
-                self.is_right_detected = False
+    def cbInvokedByObstacle(self, obstacle_type_msg):    
+        if self.is_obstacle_detected == True:
+            if obstacle_type_msg.data == self.Obstacle.lidar_obstacle.value:
+                self.is_lidar_obstacle_detected = True
+                self.is_camera_road_detected = False
 
-            elif obstacle_type_msg.data == self.TrafficSign.right.value:  
-                self.is_right_detected = True
-                self.is_left_detected = False
-            self.is_intersection_detected == False
+            elif obstacle_type_msg.data == self.Obstacle.camera_road.value:  
+                self.is_lidar_obstacle_detected = False
+                self.is_camera_road_detected = True
+            self.is_Obstacle_detected == False
 
     def cbMovingComplete(self, data):
         self.is_moving_complete = True
    
-    def cbIntersectionOrder(self, order):
-        msg_pub_intersection_return = UInt8()
+    def cbObstacleOrder(self, order):
+        msg_pub_obstacle_return = UInt8()
      
-        if order.data == self.StepOfIntersection.detect_direction.value:
+        if order.data == self.StepOfObstacle.avoid_obstacle.value:
 
-            self.is_intersection_detected = True
+            self.is_obstacle_detected = True
             while True:
-                if self.is_left_detected == True or self.is_right_detected == True:
+                if self.is_lidar_obstacle_detected == True or self.is_camera_road_detected == True:
                     break
        
-            if self.is_right_detected == True:
+            if self.is_lidar_obstacle_detected == True:
 
                 rospy.loginfo("go straight")
                 msg_moving = MovingParam()
