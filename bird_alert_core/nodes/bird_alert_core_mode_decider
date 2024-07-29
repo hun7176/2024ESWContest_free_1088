@@ -42,35 +42,42 @@ class CoreModeDecider():
 
 	# 열거형 정의
         self.InvokedObject = Enum('InvokedObject', 'obstacle bird')
-        self.TrafficSign = Enum('TrafficSign', 'intersection left right')
+        self.Obstacle = Enum('Obstacle', 'lidar_obstacle camera_road')
         self.CurrentMode = Enum('CurrentMode', 'idle autodrive obstacle shooting')
 
         self.fnInitMode()
 
-    # Invoke if traffic sign is detected
+    # Invoke if obstacle is detected
     def cbInvokedByObstacle(self, obstacle_type_msg):
-        rospy.loginfo("invoke sign")
+        rospy.loginfo("invoke obstacle")
         self.fnDecideMode(self.InvokedObject.obstacle.value, obstacle_type_msg)
-        rospy.loginfo("Traffic sign detected")
-    
-    def cbInvokedByBirdDetect(self, ):
+        rospy.loginfo("Obstacle detected")
+
+    # Invoke if bird is detected
+    def cbInvokedByBirdDetect(self, bird_type_msg):
+	rospy.loginfo("invoke bird")
+	self.fnDecideMode(self.InvokedObject.bird.value, bird_type_msg)
+	rospy.loginfo("Bird detected")
     
     def cbReturnedMode(self, mode):
         rospy.loginfo("Init Mode")
         self.fnInitMode()
 
-    def fnInitMode(self):                                                   # starts only when the program is started initially or any mission is completed
+    def fnInitMode(self):                                                   # starts only when the program is started initially or any mode is changed
         self.current_mode = self.CurrentMode.autodrive.value
         self.fnPublishMode()
 
-    def fnDecideMode(self, invoked_object, msg_data):                       # starts only when the traffic sign / traffic light is detected & current_mode is lane_following
+    def fnDecideMode(self, invoked_object, msg_data):                       # starts only when the Obstacle / bird is detected & current_mode is autodrive
         if self.current_mode == self.CurrentMode.autodrive.value:
             rospy.loginfo("autodrive")                
-            if invoked_object == self.InvokedObject.obstacle.value:   # Any Sign detected
-                rospy.loginfo("Any Sign detected")
-                if msg_data.data == self.TrafficSign.intersection.value:          # intersection sign deteced
-                    self.current_mode = self.CurrentMode.intersection.value 
-                    rospy.loginfo("detect sign : intersection")             
+            if invoked_object == self.InvokedObject.obstacle.value:   # Any Obstacle detected
+                rospy.loginfo("Any Obstacle detected")
+                if msg_data.data == self.Obstacle.lidar_obstacle.value:          # intersection sign deteced
+                    self.current_mode = self.CurrentMode.obstacle.value 
+                    rospy.loginfo("detect obstacle : lidar_obstacle")
+		elif msg_data.data == self.Obstacle.camera_obstacle.value:
+		    self.current_mode = self.CurrentMode.obstacle.value
+		    rospy.loginfo("detect obstacle : camera_road")
             else:
                 pass
             self.fnPublishMode()
