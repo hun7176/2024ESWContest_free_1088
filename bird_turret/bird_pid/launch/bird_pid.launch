@@ -1,9 +1,0 @@
-<launch>
-    <!-- ROS Master -->
-    <arg name="roscore" default="true"/>
-    
-<node pkg="bird_pid" type="pid.py" name="pid" output="screen"/>
-</launch>
-
-
-
