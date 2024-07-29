@@ -29,36 +29,44 @@ from turtlebot3_autorace_msgs.msg import MovingParam
 class CoreModeDecider():
     def __init__(self):      
         # subscribes
-        self.sub_traffic_sign = rospy.Subscriber('/detect/traffic_sign', UInt8, self.cbInvokedByTrafficSign, queue_size=1)
+        # detect_lidar_obstacle 혹은 detect_camera_road 에서 보낸 /detect/obstacle 토픽 정보 구독
+        self.sub_obstacle = rospy.Subscriber('/detect/obstacle', UInt8, self.cbInvokedByObstacle, queue_size=1)
+        # bird_detector 에서 새 감지 시, ' ' 토픽 정보 구독
+        self.sub_bird_detect = rospy.Subscriber(' ', UInt8, self.cbInvokedByBirdDetect, queue_size=1)
+        # 모드 재전파용 구독
         self.sub_returned_mode = rospy.Subscriber('/core/returned_mode', UInt8, self.cbReturnedMode, queue_size=1)
+
 
         # publishes
         self.pub_decided_mode = rospy.Publisher('/core/decided_mode', UInt8, queue_size=1)
 
-        self.InvokedObject = Enum('InvokedObject', 'traffic_sign')
+	# 열거형 정의
+        self.InvokedObject = Enum('InvokedObject', 'obstacle bird')
         self.TrafficSign = Enum('TrafficSign', 'intersection left right')
-        self.CurrentMode = Enum('CurrentMode', 'idle lane_following intersection')
+        self.CurrentMode = Enum('CurrentMode', 'idle autodrive obstacle shooting')
 
         self.fnInitMode()
 
     # Invoke if traffic sign is detected
-    def cbInvokedByTrafficSign(self, traffic_sign_type_msg):
+    def cbInvokedByObstacle(self, obstacle_type_msg):
         rospy.loginfo("invoke sign")
-        self.fnDecideMode(self.InvokedObject.traffic_sign.value, traffic_sign_type_msg)
+        self.fnDecideMode(self.InvokedObject.obstacle.value, obstacle_type_msg)
         rospy.loginfo("Traffic sign detected")
+    
+    def cbInvokedByBirdDetect(self, ):
     
     def cbReturnedMode(self, mode):
         rospy.loginfo("Init Mode")
         self.fnInitMode()
 
     def fnInitMode(self):                                                   # starts only when the program is started initially or any mission is completed
-        self.current_mode = self.CurrentMode.lane_following.value
+        self.current_mode = self.CurrentMode.autodrive.value
         self.fnPublishMode()
 
     def fnDecideMode(self, invoked_object, msg_data):                       # starts only when the traffic sign / traffic light is detected & current_mode is lane_following
-        if self.current_mode == self.CurrentMode.lane_following.value:
-            rospy.loginfo("lane_following")                
-            if invoked_object == self.InvokedObject.traffic_sign.value:   # Any Sign detected
+        if self.current_mode == self.CurrentMode.autodrive.value:
+            rospy.loginfo("autodrive")                
+            if invoked_object == self.InvokedObject.obstacle.value:   # Any Sign detected
                 rospy.loginfo("Any Sign detected")
                 if msg_data.data == self.TrafficSign.intersection.value:          # intersection sign deteced
                     self.current_mode = self.CurrentMode.intersection.value 
