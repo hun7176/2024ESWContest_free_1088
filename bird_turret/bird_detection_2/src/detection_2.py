@@ -2,7 +2,7 @@
 import os
 import rospy
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float64
+from geometry_msgs.msg import Vector3
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -20,13 +20,8 @@ class BirdDetector:
         self.image_sub = rospy.Subscriber('/usb_cam/image_raw', Image, self.callback)
         self.image_pub = rospy.Publisher('/bird_detection_2/image_with_boxes', Image, queue_size=10)
 
-        # 에러 퍼블리셔
-        self.error_x_pub = rospy.Publisher('/bird_detection_2/error_x', Float64, queue_size=10)
-        self.error_y_pub = rospy.Publisher('/bird_detection_2/error_y', Float64, queue_size=10)
-
         # PID 제어 결과 퍼블리셔
-        self.theta_pub = rospy.Publisher('/bird_detection_2/theta', Float64, queue_size=10)
-        self.phi_pub = rospy.Publisher('/bird_detection_2/phi', Float64, queue_size=10)
+        self.angle_pub = rospy.Publisher('/bird_detection_2/angles', Vector3, queue_size=10)
 
         # TensorFlow 모델 로드
         self.detection_model = self.load_model()
@@ -42,11 +37,15 @@ class BirdDetector:
         self.ki = 0.01
         self.kd = 0.05
 
+        # 중심과의 거리가 얼마 이내일 때 색을 변경할지 설정
+        self.proximity_threshold = 50  # 픽셀 단위 거리
+
     def load_model(self):
         # 모델 파일 경로 설정(수정 필요)
         script_dir = os.path.dirname(__file__)  # 현재 스크립트가 위치한 디렉토리
         model_dir = os.path.join(script_dir, '..', 'models', 'ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8', 'saved_model')
         model_dir = os.path.abspath(model_dir)
+        rospy.loginfo(f"Loading model from {model_dir}")
         model = tf.saved_model.load(model_dir)
         return model
 
@@ -82,10 +81,11 @@ class BirdDetector:
             # 중심점 계산
             image_center_x = cv_image.shape[1] // 2
             image_center_y = cv_image.shape[0] // 2
-            cv2.rectangle(cv_image, (image_center_x - 50, image_center_y - 50), 
-                          (image_center_x + 50, image_center_y + 50), (0, 255, 0), 2)
 
             detected = False
+            cross_color = (255, 255, 255)  # 기본 색상은 흰색
+            show_shoot_text = False  # shoot 텍스트 표시 여부
+            angle_msg = Vector3()  # 초기화
 
             # 이미지에서 감지된 새를 그리기 및 정보 추가
             for i in range(num_detections):
@@ -104,11 +104,14 @@ class BirdDetector:
                     text = f'ID: {class_ids[i]}, Score: {scores[i]:.2f}'
                     cv2.putText(cv_image, text, (int(left), int(top) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
                     
-                    # 중심점 에러 계산 및 퍼블리시
+                    # 중심점 에러 계산 및 콘솔 출력
                     error_x = center_x - image_center_x
                     error_y = center_y - image_center_y
-                    self.error_x_pub.publish(Float64(data=error_x))
-                    self.error_y_pub.publish(Float64(data=error_y))
+                    rospy.loginfo(f"Error X: {error_x}, Error Y: {error_y}")
+
+                    # 에러 값을 이미지에 표시
+                    error_text = f'Error X: {error_x}, Error Y: {error_y}'
+                    cv2.putText(cv_image, error_text, (10, cv_image.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
                     # PID 제어
                     control_theta, self.integral_x = self.pid_control(error_x, self.prev_error_x, self.integral_x)
@@ -118,19 +121,36 @@ class BirdDetector:
                     self.prev_error_x = error_x
                     self.prev_error_y = error_y
 
-                    # PID 제어 결과 퍼블리시
-                    self.theta_pub.publish(Float64(data=control_theta))
-                    self.phi_pub.publish(Float64(data=control_phi))
+                    # 물체가 중심에 가까운지 확인
+                    if abs(error_x) < self.proximity_threshold and abs(error_y) < self.proximity_threshold:
+                        cross_color = (0, 0, 255)  # 빨간색으로 변경
+                        show_shoot_text = True  # shoot 텍스트 표시
+                        angle_msg.z = 1.0  # z값을 1로 설정
+                        rospy.loginfo("shoot!!!")
+                    else:
+                        angle_msg.z = 0.0
 
                     detected = True
                     break
 
             if not detected:
-                # 객체가 감지되지 않은 경우 에러를 0으로 설정
-                self.error_x_pub.publish(Float64(data=0.0))
-                self.error_y_pub.publish(Float64(data=0.0))
-                self.theta_pub.publish(Float64(data=0.0))
-                self.phi_pub.publish(Float64(data=0.0))
+                # 객체가 감지되지 않은 경우 제어 신호를 0으로 설정
+                angle_msg.x = 0.0
+                angle_msg.y = 0.0
+                angle_msg.z = 0.0
+            else:
+                # PID 제어 결과 퍼블리시
+                angle_msg.x = control_theta
+                angle_msg.y = control_phi
+            self.angle_pub.publish(angle_msg)
+
+            # 중심에 흰색 또는 빨간색 십자 그리기
+            cv2.line(cv_image, (image_center_x - 50, image_center_y), (image_center_x + 50, image_center_y), cross_color, 2)
+            cv2.line(cv_image, (image_center_x, image_center_y - 50), (image_center_x, image_center_y + 50), cross_color, 2)
+
+            # shoot 텍스트 표시
+            if show_shoot_text:
+                cv2.putText(cv_image, 'shoot!!', (image_center_x - 100, image_center_y - 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
 
             image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
             self.image_pub.publish(image_message)
