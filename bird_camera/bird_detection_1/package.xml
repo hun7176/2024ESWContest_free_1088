@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>bird_detection</name>
+  <name>bird_detection_1</name>
   <version>0.0.0</version>
-  <description>The bird_detection package</description>
+  <description>The bird_detection_1 package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

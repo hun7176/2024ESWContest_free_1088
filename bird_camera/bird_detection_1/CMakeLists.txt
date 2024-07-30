@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(bird_detection)
+project(bird_detection_1)
 
 find_package(catkin REQUIRED COMPONENTS
   rospy
@@ -15,7 +15,7 @@ include_directories(
 )
 
 catkin_install_python(PROGRAMS
-  src/basic.py
+  src/detection_1.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
