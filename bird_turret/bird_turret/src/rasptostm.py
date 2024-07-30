@@ -6,7 +6,7 @@ import serial
 class UART_START:
     def __init__(self):
         rospy.init_node('rasptostm', anonymous=True)
-        self.coordinate_sub = rospy.Subscriber('/burd_turret/coordinates', Point, self.callback)
+        self.coordinate_sub = rospy.Subscriber('/bird_detection_2/angles', Point, self.callback)
         self.ser = serial.Serial("/dev/ttyACM0", baudrate=115200, timeout=1)
         rospy.on_shutdown(self.cleanup)
 
