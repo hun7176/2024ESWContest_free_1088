@@ -38,7 +38,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define MAXPULSE 750
+#define MINPULSE 150
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -92,6 +93,7 @@ static void MX_NVIC_Init(void);
 /* USER CODE BEGIN 0 */
 uint16_t dir;
 int phi, theta;
+int8_t oper, dphi, dtheta;
 int __io_putchar(int ch){
 	HAL_UART_Transmit(&huart3, (uint8_t*)&ch, 1, 0xFFFF);
 	return ch;
@@ -630,26 +632,26 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 void StartUartTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-	int8_t oper, dphi, dtheta;
 #define MOVEOP 0
 #define TRIGOP 1
   /* Infinite loop */
   for(;;)
   {
-	  HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
 //	  taskENTER_CRITICAL();
 	  HAL_UART_Receive(&huart5, (uint8_t*)&dphi, 1, 0xffff);
 	  HAL_UART_Receive(&huart5, (uint8_t*)&dtheta, 1, 0xffff);
+
+	  osSemaphoreWait(phiDirSemHandle, osWaitForever);
+	  phi=dphi;
+	  osSemaphoreRelease(phiDirSemHandle);
+	  osSemaphoreWait(thetaDirSemHandle, osWaitForever);
+	  theta=dtheta;
+	  osSemaphoreRelease(thetaDirSemHandle);
+
 	  HAL_UART_Receive(&huart5, (uint8_t*)&oper, 1, 0xffff);
 //	  taskEXIT_CRITICAL();
 	  if(oper == MOVEOP){ // need to check boundary
-		  osSemaphoreWait(phiDirSemHandle, osWaitForever);
-		  phi += dphi;
-		  osSemaphoreRelease(phiDirSemHandle);
-		  osSemaphoreWait(thetaDirSemHandle, osWaitForever);
-		  theta += dtheta;
-		  osSemaphoreRelease(thetaDirSemHandle);
-		  // move
+		  osSemaphoreRelease(moveSemHandle);
 	  }
 	  else if(oper == TRIGOP){
 		  osSemaphoreRelease(triggerSemHandle);
@@ -657,7 +659,6 @@ void StartUartTask(void const * argument)
 		  osSemaphoreWait(trigendSemHandle, osWaitForever);
 		  HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 	  }
-	  HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
   }
   /* USER CODE END 5 */
 }
@@ -674,23 +675,26 @@ void StartMotorTask(void const * argument)
   /* USER CODE BEGIN StartMotorTask */
   const int PHICENTER = 450-1, THETACENTER = 450-1;
 //  int phipulse = PHICENTER, thetapulse = THETACENTER;
-  int phioffset = 0, thetaoffset = 0;
+  int phipulse = PHICENTER, thetapulse = THETACENTER;
   /* Infinite loop */
   for(;;)
   {
-//  	  osSemaphoreWait(moveSemHandle, osWaitForever);
-	  HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
+  	  osSemaphoreWait(moveSemHandle, osWaitForever);
+
 	  osSemaphoreWait(phiDirSemHandle, osWaitForever);
-	  phioffset = phi;
+	  phipulse += phi;
 	  osSemaphoreRelease(phiDirSemHandle);
+
 	  osSemaphoreWait(thetaDirSemHandle, osWaitForever);
-	  thetaoffset = theta;
+	  thetapulse += theta;
 	  osSemaphoreRelease(thetaDirSemHandle);
-	  TIM2->CCR4 = PHICENTER + phioffset;
-	  TIM3->CCR3 = THETACENTER + thetaoffset;
-	  osDelay(5);
-	  HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
-//	  osSemaphoreRelease(moveendSemHandle);
+
+	  if(phipulse<MINPULSE||phipulse>MAXPULSE||thetapulse<MINPULSE||thetapulse>MAXPULSE){
+		  HAL_UART_Transmit(&huart5, '\0', 1, 0xffff);
+		  phipulse = PHICENTER, thetapulse = THETACENTER;
+	  }
+	  TIM2->CCR4 = phipulse;
+	  TIM3->CCR3 = thetapulse;
   }
   /* USER CODE END StartMotorTask */
 }
