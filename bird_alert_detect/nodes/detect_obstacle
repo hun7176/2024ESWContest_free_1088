@@ -29,7 +29,7 @@ class DetectObstacle():
     def __init__(self):
    
         # subscribes state
-        self.sub_obstacle = rospy.Subscriber('/detect/obstacle', UInt8, self.cbInvokedByObstacle, queue_size=1)
+        self.sub_obstacle_pos = rospy.Subscriber('/detect/obstacle', UInt8, self.cbInvokedByObstacle, queue_size=1)
         self.sub_obstacle_order = rospy.Subscriber('/detect/obstacle_order', UInt8, self.cbObstacleOrder, queue_size=1)
         self.sub_moving_completed = rospy.Subscriber('/control/moving/complete', UInt8, self.cbMovingComplete, queue_size = 1)
 
@@ -38,22 +38,29 @@ class DetectObstacle():
         self.pub_moving = rospy.Publisher('/control/moving/state', MovingParam, queue_size= 1)
     
         self.StepOfObstacle = Enum('StepOfObstacle', 'avoid_obstacle exit')
-        self.Obstacle = Enum('Obstacle', 'lidar_obstacle camera_road')   
+        self.Obstacle_pos = Enum('Obstacle_pos', 'center left right')   
 
         self.is_moving_complete = False
         self.is_obstacle_detected = False
-        self.is_lidar_obstacle_detected = False
-        self.is_camera_road_detected = False
+        self.is_center_detected = False
+        self.is_left_detected = False
+        self.is_right_detected = False
 
+    # 감지된 장애물 위치 판단
     def cbInvokedByObstacle(self, obstacle_type_msg):    
         if self.is_obstacle_detected == True:
-            if obstacle_type_msg.data == self.Obstacle.lidar_obstacle.value:
-                self.is_lidar_obstacle_detected = True
-                self.is_camera_road_detected = False
-
-            elif obstacle_type_msg.data == self.Obstacle.camera_road.value:  
-                self.is_lidar_obstacle_detected = False
-                self.is_camera_road_detected = True
+            if obstacle_type_msg.data == self.Obstacle_pos.center.value:
+                self.is_center_detected = True
+                self.is_left_detected = False
+                self.is_right_detected = False
+            elif obstacle_type_msg.data == self.Obstacle_pos.left.value:
+                self.is_center_detected = False
+                self.is_left_detected = True
+                self.is_right_detected = False
+            elif obstacle_type_msg.data == self.Obstacle_pos.right.value:
+                self.is_center_detected = False
+                self.is_left_detected = False
+                self.is_right_detected = True
             self.is_Obstacle_detected == False
 
     def cbMovingComplete(self, data):
