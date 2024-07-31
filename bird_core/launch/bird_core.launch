@@ -1,4 +1,7 @@
 <launch>
   <node name="core" pkg="bird_core" type="core.py" output="screen">
   </node>
+  <node name="lidar_processing_node" pkg="bird_core" type="lidar_processing_node.py" output="screen">
+  </node>
 </launch>
+

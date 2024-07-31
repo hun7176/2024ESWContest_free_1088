@@ -2,7 +2,6 @@
 
 import rospy
 from std_msgs.msg import Int32
-from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 
 class AutonomousVehicleNode:
@@ -16,7 +15,7 @@ class AutonomousVehicleNode:
         # Publishers and Subscribers
         self.cmd_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         self.shooting_done_sub = rospy.Subscriber('/shooting_done', Int32, self.shooting_done_callback)
-        self.obstacle_sub = rospy.Subscriber('/scan', LaserScan, self.obstacle_callback)
+        self.lidar_trigger_sub = rospy.Subscriber('/lidar_trigger', Int32, self.lidar_trigger_callback)
         self.detect_sub = rospy.Subscriber('/detection_1/is_triggered', Int32, self.detect_callback)
         self.shooting_mode_pub = rospy.Publisher('/shooting_mode_trigger', Int32, queue_size=10)
 
@@ -32,11 +31,10 @@ class AutonomousVehicleNode:
             self.current_mode = 'driving'
         rospy.loginfo("Shooting done: %s, mode: %s", self.shooting_done, self.current_mode)
 
-    def obstacle_callback(self, data):
-        if self.current_mode == 'driving':
-            if min(data.ranges) < 0.001:  # 임계값 설정
-                self.current_mode = 'obstacle'
-        rospy.loginfo("Obstacle detected, mode: %s", self.current_mode)
+    def lidar_trigger_callback(self, msg):
+        if self.current_mode == 'driving' and msg.data == 1:
+            self.current_mode = 'obstacle'
+        rospy.loginfo("Lidar trigger received, mode: %s", self.current_mode)
 
     def detect_callback(self, msg):
         if msg.data == 1:
@@ -78,4 +76,3 @@ if __name__ == '__main__':
         node.run()
     except rospy.ROSInterruptException:
         pass
-
