@@ -1,0 +1,4 @@
+<launch>
+  <node name="core" pkg="bird_core" type="core.py" output="screen">
+  </node>
+</launch>
