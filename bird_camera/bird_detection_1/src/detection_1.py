@@ -16,6 +16,7 @@ class BirdDetection:
         self.image_pub = rospy.Publisher('/detection_1/image_with_boxes', Image, queue_size=10)
         self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
+        self.bird_class_id = 16  # 새의 클래스 ID 설정 (예: COCO 데이터셋에서는 16)
 
     def load_model(self):
         script_dir = os.path.dirname(__file__)
@@ -40,7 +41,7 @@ class BirdDetection:
 
             bird_detected = False
             for i in range(num_detections):
-                if scores[i] > 0.5:
+                if scores[i] > 0.5 and class_ids[i] == self.bird_class_id:  # 감지된 객체가 새인지 확인
                     box = boxes[i]
                     ymin, xmin, ymax, xmax = box
                     left, right, top, bottom = (xmin * cv_image.shape[1], xmax * cv_image.shape[1],
