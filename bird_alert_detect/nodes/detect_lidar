@@ -9,7 +9,7 @@ class LidarProcessingNode:
         rospy.init_node('lidar_processing_node')
 
         # Publisher
-        self.obstacle_pub = rospy.Publisher('/lidar_trigger', Int32, queue_size=10)
+        self.pub_obstacle_pos = rospy.Publisher('/detect/obstacle', Int32, queue_size=10)
 
         # Subscriber
         self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
