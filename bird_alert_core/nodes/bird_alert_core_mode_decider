@@ -43,7 +43,7 @@ class CoreModeDecider():
 	# 열거형 정의
         self.InvokedObject = Enum('InvokedObject', 'obstacle bird')
         self.Obstacle = Enum('Obstacle', 'lidar_obstacle camera_road')
-	self.Bird = Enum('Bird', 'is_there')
+        self.Bird = Enum('Bird', 'is_there')
         self.CurrentMode = Enum('CurrentMode', 'idle autodrive obstacle shooting')
 
         self.fnInitMode()
@@ -56,7 +56,7 @@ class CoreModeDecider():
 
     # Invoke if bird is detected
     def cbInvokedByBirdDetect(self, bird_type_msg):
-	rospy.loginfo("invoke bird")
+        rospy.loginfo("invoke bird")
 	self.fnDecideMode(self.InvokedObject.bird.value, bird_type_msg)
 	rospy.loginfo("Bird detected")
     
@@ -76,28 +76,28 @@ class CoreModeDecider():
                 if msg_data.data == self.Obstacle.lidar_obstacle.value:          # intersection sign deteced
                     self.current_mode = self.CurrentMode.obstacle.value 
                     rospy.loginfo("detect obstacle : lidar_obstacle")
-		elif msg_data.data == self.Obstacle.camera_obstacle.value:
-		    self.current_mode = self.CurrentMode.obstacle.value
-		    rospy.loginfo("detect obstacle : camera_road")
-	    elif invoked_object == self.InvokedObject.bird.value:
-		rospy.loginfo("Bird is detected")
-		if msg_data.data == self.Bird.is_there.value:
-		    self.current_mode = self.CurrentMode.bird.value
-		    rospy.loginfo("detect bird")
+                elif msg_data.data == self.Obstacle.camera_obstacle.value:
+                    self.current_mode = self.CurrentMode.obstacle.value
+                    rospy.loginfo("detect obstacle : camera_road")
+            elif invoked_object == self.InvokedObject.bird.value:
+                rospy.loginfo("Bird is detected")
+                if msg_data.data == self.Bird.is_there.value:
+                    self.current_mode = self.CurrentMode.bird.value
+                    rospy.loginfo("detect bird")
             else:
                 pass
             self.fnPublishMode()
 
         elif self.current_mode == self.CurrentMode.obstacle.value:
-	    rospy.loginfo("obstacle")
-	    if invoked_object == self.InvokedObject.bird.value:
-		rospy.loginfo("Bird is detected")
-		if msg_data.data == self.Bird.is_there.value:
-		    self.current_mode = self.CurrentMode.bird.value
-		    rospy.loginfo("detect bird")
+            rospy.loginfo("obstacle")
+            if invoked_object == self.InvokedObject.bird.value:
+                rospy.loginfo("Bird is detected")
+                if msg_data.data == self.Bird.is_there.value:
+                    self.current_mode = self.CurrentMode.bird.value
+                    rospy.loginfo("detect bird")
             else:
                 pass
-	    self.fnPublishMode()
+            self.fnPublishMode()
 
         else:
             pass
