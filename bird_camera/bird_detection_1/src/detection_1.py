@@ -26,12 +26,13 @@ class BirdDetection:
 
     def callback(self, data):
         try:
+            # ROS Image 메시지를 CV2 이미지로 변환
             cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
             image_np = np.array(cv_image)
             input_tensor = tf.convert_to_tensor(image_np)
             input_tensor = input_tensor[tf.newaxis, ...]
 
-            start_time = time.time()
+            # 객체 감지 수행
             output_dict = self.detection_model(input_tensor)
             num_detections = int(output_dict['num_detections'][0])
             boxes = output_dict['detection_boxes'][0].numpy()
@@ -40,27 +41,39 @@ class BirdDetection:
 
             bird_detected = False
             for i in range(num_detections):
-                if scores[i] > 0.5:
+                if scores[i] > 0.3 and class_ids[i] == 16:  # 신뢰도 임계값 및 클래스 ID가 'bird'인지 확인
                     box = boxes[i]
                     ymin, xmin, ymax, xmax = box
                     left, right, top, bottom = (xmin * cv_image.shape[1], xmax * cv_image.shape[1],
                                                 ymin * cv_image.shape[0], ymax * cv_image.shape[0])
+                    
+                    # 바운딩 박스 그리기
                     cv2.rectangle(cv_image, (int(left), int(top)), (int(right), int(bottom)), (255, 0, 0), 2)
-                    bird_detected = True
-                    break  # 새가 감지되면 루프를 종료
+                    
+                    # 정확도 점수 그리기
+                    score_text = f"Score: {scores[i]:.2f}"
+                    cv2.putText(cv_image, score_text, (int(left), int(top) - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    
+                    # 'Detect!'라는 글씨 그리기
+                    cv2.putText(cv_image, "Detect!", (int(left), int(top) - 30), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                    
+                    bird_detected = True  # 새가 감지된 것으로 설정
+                    # break  # 감지된 새가 여러 마리일 경우, break를 제거합니다.
 
+            # 감지된 새가 하나라도 있으면 트리거 신호 발송
             if bird_detected:
                 self.trigger_pub.publish(1)
+            else:
+                self.trigger_pub.publish(0)  # 새가 감지되지 않은 경우, 신호를 0으로 설정
 
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            rospy.loginfo(f"Detection and trigger signal processing time: {elapsed_time:.6f} seconds")
-
+            # CV2 이미지를 다시 ROS Image 메시지로 변환
             image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
             self.image_pub.publish(image_message)
 
         except Exception as e:
-            rospy.logerr(f"Exception in callback: {e}")
+            rospy.logerr(f"Callback에서 예외 발생: {e}")
 
     def run(self):
         rospy.spin()
