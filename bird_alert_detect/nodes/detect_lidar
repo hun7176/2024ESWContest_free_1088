@@ -12,35 +12,48 @@ class LidarProcessingNode:
         self.pub_obstacle_pos = rospy.Publisher('/detect/obstacle', Int32, queue_size=10)
 
         # Subscriber
-        self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
+        self.sub_scan = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
 
         # Parameters
-        self.front_angle_range = rospy.get_param('~front_angle_range', 30)  # 앞쪽 각도 범위 (디폴트: 30도)
-        self.distance_threshold = rospy.get_param('~distance_threshold', 0.5)  # 거리 임계값 (디폴트: 0.5미터)
+        self.distance_threshold_center = rospy.get_param('~distance_threshold_center', 0.5)  # 거리 임계값 (디폴트: 0.5미터)
+        self.distance_threshold_side = rospy.get_param('~distance_threshold_side', 0.3)  # 거리 임계값 (디폴트: 0.5미터)
         self.min_valid_distance = rospy.get_param('~min_valid_distance', 0.1)  # 최소 유효 거리 (디폴트: 0.1미터)
 
     def scan_callback(self, data):
-        # 앞 120도 각도의 인덱스를 계산
+        # 전방에 기준이 되는 각 계산 (전체 각도의 중심각)
         total_angles = int((data.angle_max - data.angle_min) / data.angle_increment)
-        start_index = int((total_angles / 2) - (60 / data.angle_increment))
-        end_index = int((total_angles / 2) + (60 / data.angle_increment))
+        center_angles = total_angles // 2
 
-        # 유효 거리 값 필터링
-        valid_ranges = [dist for dist in data.ranges[start_index:end_index] if dist > self.min_valid_distance]
+        # 전방 각도 계산
+        center_start_index = center_angles - int(30 / data.angle_increment)
+        center_end_index = center_angles + int(30 / data.angle_increment)
 
-        # 앞 120도 내에서 장애물 감지
-        if valid_ranges:
-            min_distance = min(valid_ranges)
-            rospy.loginfo("Min distance in front 120 degrees: %f", min_distance)
-            if min_distance < self.distance_threshold:  # 임계값 설정
-                self.obstacle_pub.publish(Int32(data=1))
-                rospy.loginfo("Obstacle detected within %f meters", self.distance_threshold)
-            else:
-                self.obstacle_pub.publish(Int32(data=0))
-                rospy.loginfo("No obstacle within %f meters", self.distance_threshold)
+        # 사이드 각도 계산
+        side_start_index = center_angles - int(60 / data.angle_increment)
+        side_end_index = center_angles + int(60 / data.angle_increment)
+
+        obstacle_detected = False
+
+        for i, dist in enumerate(data.ranges[side_start_index:side_end_index]):
+            if dist > self.min_valid_distance:
+                # 현재 각도가 전방 60도 범위에 있는지 확인
+                if central_start_index <= (side_start_index + i) <= central_end_index:
+                    threshold = self.distance_threshold_central
+                else:
+                    threshold = self.distance_threshold_side
+
+                # 임계값과 비교
+                if dist < threshold:
+                    obstacle_detected = True
+                    break
+
+        # 장애물 감지 결과 퍼블리시
+        if obstacle_detected:
+            self.pub_obstacle_pos.publish(Int32(data=1))
+            rospy.loginfo("Obstacle detected")
         else:
-            self.obstacle_pub.publish(Int32(data=0))
-            rospy.loginfo("No valid distance measurements in front 120 degrees")
+            self.pub_obstacle_pos.publish(Int32(data=0))
+            rospy.loginfo("No obstacle detected")
 
     def run(self):
         rospy.spin()
