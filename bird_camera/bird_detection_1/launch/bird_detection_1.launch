@@ -1,0 +1,6 @@
+<launch>
+    <!-- ROS Master -->
+    <arg name="roscore" default="true"/>
+    
+<node pkg="bird_detection_1" type="detection_1.py" name="detection_1" output="screen"/>
+</launch>

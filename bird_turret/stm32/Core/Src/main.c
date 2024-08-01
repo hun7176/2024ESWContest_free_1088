@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,7 +38,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define MAXPULSE 750
+#define MINPULSE 150
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -49,57 +50,23 @@ ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptor
 
 ETH_HandleTypeDef heth;
 
+TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
+
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
-/* Definitions for uartTask */
-osThreadId_t uartTaskHandle;
-const osThreadAttr_t uartTask_attributes = {
-  .name = "uartTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for phiTask */
-osThreadId_t phiTaskHandle;
-const osThreadAttr_t phiTask_attributes = {
-  .name = "phiTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for thetaTask */
-osThreadId_t thetaTaskHandle;
-const osThreadAttr_t thetaTask_attributes = {
-  .name = "thetaTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for uartSem */
-osSemaphoreId_t uartSemHandle;
-const osSemaphoreAttr_t uartSem_attributes = {
-  .name = "uartSem"
-};
-/* Definitions for triggerSem */
-osSemaphoreId_t triggerSemHandle;
-const osSemaphoreAttr_t triggerSem_attributes = {
-  .name = "triggerSem"
-};
-/* Definitions for phiSem */
-osSemaphoreId_t phiSemHandle;
-const osSemaphoreAttr_t phiSem_attributes = {
-  .name = "phiSem"
-};
-/* Definitions for thetaSem */
-osSemaphoreId_t thetaSemHandle;
-const osSemaphoreAttr_t thetaSem_attributes = {
-  .name = "thetaSem"
-};
-/* Definitions for moveDoneEvent */
-osEventFlagsId_t moveDoneEventHandle;
-const osEventFlagsAttr_t moveDoneEvent_attributes = {
-  .name = "moveDoneEvent"
-};
+osThreadId uartTaskHandle;
+osThreadId motorTaskHandle;
+osThreadId trigTaskHandle;
+osSemaphoreId phiDirSemHandle;
+osSemaphoreId thetaDirSemHandle;
+osSemaphoreId triggerSemHandle;
+osSemaphoreId trigendSemHandle;
+osSemaphoreId moveSemHandle;
+osSemaphoreId moveendSemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -111,9 +78,11 @@ static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_UART5_Init(void);
-void StartUARTTask(void *argument);
-void StartPhiTask(void *argument);
-void StartThetaTask(void *argument);
+static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
+void StartUartTask(void const * argument);
+void StartMotorTask(void const * argument);
+void StartTrigTask(void const * argument);
 
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
@@ -123,7 +92,8 @@ static void MX_NVIC_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint16_t dir;
-uint8_t phi, theta;
+int phi, theta;
+int8_t oper, dphi, dtheta;
 int __io_putchar(int ch){
 	HAL_UART_Transmit(&huart3, (uint8_t*)&ch, 1, 0xFFFF);
 	return ch;
@@ -174,32 +144,45 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_UART5_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart3, &dir, 2);
+  HAL_UART_Receive_IT(&huart3, (uint8_t *)&dir, 1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* creation of uartSem */
-  uartSemHandle = osSemaphoreNew(1, 1, &uartSem_attributes);
+  /* definition and creation of phiDirSem */
+  osSemaphoreDef(phiDirSem);
+  phiDirSemHandle = osSemaphoreCreate(osSemaphore(phiDirSem), 1);
 
-  /* creation of triggerSem */
-  triggerSemHandle = osSemaphoreNew(2, 0, &triggerSem_attributes);
+  /* definition and creation of thetaDirSem */
+  osSemaphoreDef(thetaDirSem);
+  thetaDirSemHandle = osSemaphoreCreate(osSemaphore(thetaDirSem), 1);
 
-  /* creation of phiSem */
-  phiSemHandle = osSemaphoreNew(2, 2, &phiSem_attributes);
+  /* definition and creation of triggerSem */
+  osSemaphoreDef(triggerSem);
+  triggerSemHandle = osSemaphoreCreate(osSemaphore(triggerSem), 1);
 
-  /* creation of thetaSem */
-  thetaSemHandle = osSemaphoreNew(2, 2, &thetaSem_attributes);
+  /* definition and creation of trigendSem */
+  osSemaphoreDef(trigendSem);
+  trigendSemHandle = osSemaphoreCreate(osSemaphore(trigendSem), 1);
+
+  /* definition and creation of moveSem */
+  osSemaphoreDef(moveSem);
+  moveSemHandle = osSemaphoreCreate(osSemaphore(moveSem), 1);
+
+  /* definition and creation of moveendSem */
+  osSemaphoreDef(moveendSem);
+  moveendSemHandle = osSemaphoreCreate(osSemaphore(moveendSem), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -214,26 +197,21 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of uartTask */
-  uartTaskHandle = osThreadNew(StartUARTTask, NULL, &uartTask_attributes);
+  /* definition and creation of uartTask */
+  osThreadDef(uartTask, StartUartTask, osPriorityNormal, 0, 128);
+  uartTaskHandle = osThreadCreate(osThread(uartTask), NULL);
 
-  /* creation of phiTask */
-  phiTaskHandle = osThreadNew(StartPhiTask, NULL, &phiTask_attributes);
+  /* definition and creation of motorTask */
+  osThreadDef(motorTask, StartMotorTask, osPriorityNormal, 0, 128);
+  motorTaskHandle = osThreadCreate(osThread(motorTask), NULL);
 
-  /* creation of thetaTask */
-  thetaTaskHandle = osThreadNew(StartThetaTask, NULL, &thetaTask_attributes);
+  /* definition and creation of trigTask */
+  osThreadDef(trigTask, StartTrigTask, osPriorityHigh, 0, 128);
+  trigTaskHandle = osThreadCreate(osThread(trigTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* Create the event(s) */
-  /* creation of moveDoneEvent */
-  moveDoneEventHandle = osEventFlagsNew(&moveDoneEvent_attributes);
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -356,6 +334,124 @@ static void MX_ETH_Init(void)
   /* USER CODE BEGIN ETH_Init 2 */
 
   /* USER CODE END ETH_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 280-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 6000-1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 450-1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 280-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 6000-1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 450-1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
 
 }
 
@@ -526,58 +622,104 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartUARTTask */
+/* USER CODE BEGIN Header_StartUartTask */
 /**
   * @brief  Function implementing the uartTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartUARTTask */
-void StartUARTTask(void *argument)
+/* USER CODE END Header_StartUartTask */
+void StartUartTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
+#define MOVEOP 0
+#define TRIGOP 1
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+//	  taskENTER_CRITICAL();
+	  HAL_UART_Receive(&huart5, (uint8_t*)&dphi, 1, 0xffff);
+	  HAL_UART_Receive(&huart5, (uint8_t*)&dtheta, 1, 0xffff);
+
+	  osSemaphoreWait(phiDirSemHandle, osWaitForever);
+	  phi=dphi;
+	  osSemaphoreRelease(phiDirSemHandle);
+	  osSemaphoreWait(thetaDirSemHandle, osWaitForever);
+	  theta=dtheta;
+	  osSemaphoreRelease(thetaDirSemHandle);
+
+	  HAL_UART_Receive(&huart5, (uint8_t*)&oper, 1, 0xffff);
+//	  taskEXIT_CRITICAL();
+	  if(oper == MOVEOP){ // need to check boundary
+		  osSemaphoreRelease(moveSemHandle);
+	  }
+	  else if(oper == TRIGOP){
+		  osSemaphoreRelease(triggerSemHandle);
+		  HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+		  osSemaphoreWait(trigendSemHandle, osWaitForever);
+		  HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+	  }
   }
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartPhiTask */
+/* USER CODE BEGIN Header_StartMotorTask */
 /**
-* @brief Function implementing the phiTask thread.
+* @brief Function implementing the motorTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartPhiTask */
-void StartPhiTask(void *argument)
+/* USER CODE END Header_StartMotorTask */
+void StartMotorTask(void const * argument)
 {
-  /* USER CODE BEGIN StartPhiTask */
+  /* USER CODE BEGIN StartMotorTask */
+  const int PHICENTER = 450-1, THETACENTER = 450-1;
+//  int phipulse = PHICENTER, thetapulse = THETACENTER;
+  int phipulse = PHICENTER, thetapulse = THETACENTER;
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+  	  osSemaphoreWait(moveSemHandle, osWaitForever);
+
+	  osSemaphoreWait(phiDirSemHandle, osWaitForever);
+	  phipulse += phi;
+	  osSemaphoreRelease(phiDirSemHandle);
+
+	  osSemaphoreWait(thetaDirSemHandle, osWaitForever);
+	  thetapulse += theta;
+	  osSemaphoreRelease(thetaDirSemHandle);
+
+	  if(phipulse<MINPULSE||phipulse>MAXPULSE||thetapulse<MINPULSE||thetapulse>MAXPULSE){
+		  HAL_UART_Transmit(&huart5, '\0', 1, 0xffff);
+		  phipulse = PHICENTER, thetapulse = THETACENTER;
+	  }
+	  TIM2->CCR4 = phipulse;
+	  TIM3->CCR3 = thetapulse;
   }
-  /* USER CODE END StartPhiTask */
+  /* USER CODE END StartMotorTask */
 }
 
-/* USER CODE BEGIN Header_StartThetaTask */
+/* USER CODE BEGIN Header_StartTrigTask */
 /**
-* @brief Function implementing the thetaTask thread.
+* @brief Function implementing the trigTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartThetaTask */
-void StartThetaTask(void *argument)
+/* USER CODE END Header_StartTrigTask */
+void StartTrigTask(void const * argument)
 {
-  /* USER CODE BEGIN StartThetaTask */
+  /* USER CODE BEGIN StartTrigTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	osSemaphoreWait(triggerSemHandle, osWaitForever);
+	HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+	printf("%d %d\r\n", phi, theta);
+//    osDelay(16);
+	HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+    osSemaphoreRelease(trigendSemHandle);
   }
-  /* USER CODE END StartThetaTask */
+  /* USER CODE END StartTrigTask */
 }
 
 /**
