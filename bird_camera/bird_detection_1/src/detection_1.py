@@ -81,3 +81,4 @@ class BirdDetection:
 if __name__ == '__main__':
     detector = BirdDetection()
     detector.run()
+a
