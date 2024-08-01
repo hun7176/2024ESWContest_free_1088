@@ -12,7 +12,5 @@
     <include file="$(arg bird_detection2_launch)" />
 
     <!-- Launch bird_turret -->
-    <arg name="bird_turret_launch" default="$(find bird_turret)/launch/bird_turret.launch" />
-    <include file="$(arg bird_turret_launch)" />
 </launch>
 
