@@ -7,30 +7,14 @@
 class ImageCompressor
 {
 public:
-    ImageCompressor()
+    ImageCompressor(const std::string& input_topic, const std::string& output_topic)
         : it_(nh_)
     {
-        // 첫 번째 이미지 구독자 및 퍼블리셔
-        image_sub1_ = it_.subscribe("/usb_cam1/image_raw", 1, &ImageCompressor::imageCallback1, this);
-        image_pub1_ = it_.advertise("/usb_cam1/image_compressed", 1);
-
-        // 두 번째 이미지 구독자 및 퍼블리셔
-        image_sub2_ = it_.subscribe("/usb_cam2/image_raw", 1, &ImageCompressor::imageCallback2, this);
-        image_pub2_ = it_.advertise("/usb_cam2/image_compressed", 1);
+        image_sub_ = it_.subscribe(input_topic, 1, &ImageCompressor::imageCallback, this);
+        image_pub_ = it_.advertise(output_topic, 1);
     }
 
-    void imageCallback1(const sensor_msgs::ImageConstPtr& msg)
-    {
-        processImage(msg, image_pub1_);
-    }
-
-    void imageCallback2(const sensor_msgs::ImageConstPtr& msg)
-    {
-        processImage(msg, image_pub2_);
-    }
-
-private:
-    void processImage(const sensor_msgs::ImageConstPtr& msg, const image_transport::Publisher& pub)
+    void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     {
         cv_bridge::CvImagePtr cv_ptr;
         try
@@ -58,21 +42,29 @@ private:
         out_msg.image = cv::imdecode(buf, cv::IMREAD_COLOR);
 
         // 퍼블리시
-        pub.publish(out_msg.toImageMsg());
+        image_pub_.publish(out_msg.toImageMsg());
     }
 
+private:
     ros::NodeHandle nh_;
     image_transport::ImageTransport it_;
-    image_transport::Subscriber image_sub1_;
-    image_transport::Subscriber image_sub2_;
-    image_transport::Publisher image_pub1_;
-    image_transport::Publisher image_pub2_;
+    image_transport::Subscriber image_sub_;
+    image_transport::Publisher image_pub_;
 };
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "image_compressor");
-    ImageCompressor ic;
+
+    if (argc != 3) {
+        ROS_ERROR("Usage: image_compressor <input_topic> <output_topic>");
+        return -1;
+    }
+
+    std::string input_topic = argv[1];
+    std::string output_topic = argv[2];
+
+    ImageCompressor ic(input_topic, output_topic);
     ros::spin();
     return 0;
 }
