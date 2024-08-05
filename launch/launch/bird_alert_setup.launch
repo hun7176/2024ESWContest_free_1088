@@ -5,8 +5,10 @@
     <!-- Launch USB Camera -->
     <include file="$(find usb_cam)/launch/usb_cam.launch" />
     
-    <!-- Launch camera compress -->
-    <include file="$(find image_compress)/launch/image_compress.launch" />
+    <!-- Launch image_compressor -->
+    <include file="$(find image_compressor)/launch/image_compressor.launch" />
+    
+ 
 			
     <arg name="bird_turret_launch" default="$(find bird_turret)/launch/bird_turret.launch" />
     <include file="$(arg bird_turret_launch)" />
