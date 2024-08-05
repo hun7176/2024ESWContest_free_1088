@@ -1,7 +1,50 @@
 <launch>
+    <!-- 첫 번째 usb_cam 노드 실행 -->
+    <node name="usb_cam1" pkg="usb_cam" type="usb_cam_node" output="screen">
+        <param name="video_device" value="/dev/video0" />
+        <param name="image_width" value="640" />
+        <param name="image_height" value="480" />
+        <param name="pixel_format" value="mjpeg" />
+        <param name="io_method" value="mmap" />
+        <param name="framerate" value="30" />
+        <param name="camera_frame_id" value="usb_cam1" />
+        <remap from="image_raw" to="/usb_cam1/image_raw" />
+    </node>
 
-    <node name="image_compressor" pkg="image_compress" type="image_compressor" output="screen">
+    <!-- 첫 번째 이미지 압축 노드 실행 -->
+    <node name="image_compressor1" pkg="image_compress" type="image_compressor" output="screen">
+        <remap from="/usb_cam/image_raw" to="/usb_cam1/image_raw" />
+        <remap from="/usb_cam/image_compressed" to="/usb_cam1/image_compressed" />
+    </node>
 
+    <!-- 첫 번째 압축된 이미지 토픽 전송을 위한 relay 노드 실행 -->
+    <node name="compressed_image_relay1" pkg="topic_tools" type="relay" output="screen">
+        <param name="input" value="/usb_cam1/image_compressed"/>
+        <param name="output" value="/usb_cam1/image_compressed_relay"/>
+    </node>
+
+    <!-- 두 번째 usb_cam 노드 실행 -->
+    <node name="usb_cam2" pkg="usb_cam" type="usb_cam_node" output="screen">
+        <param name="video_device" value="/dev/video2" />
+        <param name="image_width" value="640" />
+        <param name="image_height" value="480" />
+        <param name="pixel_format" value="mjpeg" />
+        <param name="io_method" value="mmap" />
+        <param name="framerate" value="30" />
+        <param name="camera_frame_id" value="usb_cam2" />
+        <remap from="image_raw" to="/usb_cam2/image_raw" />
+    </node>
+
+    <!-- 두 번째 이미지 압축 노드 실행 -->
+    <node name="image_compressor2" pkg="image_compress" type="image_compressor" output="screen">
+        <remap from="/usb_cam/image_raw" to="/usb_cam2/image_raw" />
+        <remap from="/usb_cam/image_compressed" to="/usb_cam2/image_compressed" />
+    </node>
+
+    <!-- 두 번째 압축된 이미지 토픽 전송을 위한 relay 노드 실행 -->
+    <node name="compressed_image_relay2" pkg="topic_tools" type="relay" output="screen">
+        <param name="input" value="/usb_cam2/image_compressed"/>
+        <param name="output" value="/usb_cam2/image_compressed_relay"/>
     </node>
 </launch>
 

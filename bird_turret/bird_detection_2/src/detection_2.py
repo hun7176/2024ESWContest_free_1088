@@ -17,7 +17,7 @@ class BirdDetector:
         self.bridge = CvBridge()
 
         # 카메라 이미지 구독(수정 필요)
-        self.image_sub = rospy.Subscriber('/usb_cam/image_raw', Image, self.callback)
+        self.image_sub = rospy.Subscriber('/usb_cam/image_raw/compressed', Image, self.callback)
         self.image_pub = rospy.Publisher('/bird_detection_2/image_with_boxes', Image, queue_size=10)
 
         # PID 제어 결과 퍼블리셔

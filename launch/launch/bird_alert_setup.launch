@@ -3,7 +3,7 @@
     <include file="$(find turtlebot3_bringup)/launch/turtlebot3_robot.launch" />
 
     <!-- Launch USB Camera -->
-    <include file="$(find usb_cam)/launch/usb_cam.launch" />
+ <!--    <include file="$(find usb_cam)/launch/usb_cam.launch" /> -->
     
     <!-- Launch image_compressor -->
     <include file="$(find image_compressor)/launch/image_compressor.launch" />
