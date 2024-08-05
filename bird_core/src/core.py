@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import rospy
 from std_msgs.msg import Int32
@@ -53,7 +54,6 @@ class AutonomousVehicleNode:
                 self.twist.angular.z = 1.0  # 회전하여 장애물 회피
                 self.cmd_pub.publish(self.twist)
                 rospy.loginfo("Current mode: obstacle, turning")
-                rospy.sleep(1)
                 self.current_mode = 'driving'
                 continue  # 다음 루프를 바로 실행하여 정지 상태로 가지 않도록 함
             elif self.current_mode == 'shooting':
