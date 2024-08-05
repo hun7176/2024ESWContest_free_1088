@@ -1,0 +1,7 @@
+<launch>
+
+    <node name="image_compressor" pkg="image_compress" type="image_compressor" output="screen">
+
+    </node>
+</launch>
+
