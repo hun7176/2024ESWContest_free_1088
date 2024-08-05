@@ -1,0 +1,8 @@
+<launch>
+    <!-- image_compressor 노드 실행 -->
+    <node pkg="image_compressor" type="image_compressor.py" name="image_compressor" output="screen">
+    </node>
+</launch>
+
+
+
