@@ -1,19 +1,18 @@
 import os
 import rospy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Int32
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
 import tensorflow as tf
-import time
 
 class BirdDetection:
     def __init__(self):
         rospy.init_node('detection_1', anonymous=True)
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber('/usb_cam/image_raw', Image, self.callback)
-        self.image_pub = rospy.Publisher('/detection_1/image_with_boxes', Image, queue_size=10)
+        self.image_sub = rospy.Subscriber('/usb_cam/image_raw, CompressedImage, self.callback)
+        self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
         self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
 
@@ -26,8 +25,9 @@ class BirdDetection:
 
     def callback(self, data):
         try:
-            # ROS Image 메시지를 CV2 이미지로 변환
-            cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
+            # 압축된 이미지를 CV2 이미지로 변환
+            np_arr = np.fromstring(data.data, np.uint8)
+            cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
             image_np = np.array(cv_image)
             input_tensor = tf.convert_to_tensor(image_np)
             input_tensor = input_tensor[tf.newaxis, ...]
@@ -48,15 +48,15 @@ class BirdDetection:
                                                 ymin * cv_image.shape[0], ymax * cv_image.shape[0])
                     
                     # 바운딩 박스 그리기
-                    cv2.rectangle(cv_image, (int(left), int(top)), (int(right), int(bottom)), (255, 0, 0), 2)
+                    cv_image = cv2.rectangle(cv_image, (int(left), int(top)), (int(right), int(bottom)), (255, 0, 0), 2)
                     
                     # 정확도 점수 그리기
                     score_text = f"Score: {scores[i]:.2f}"
-                    cv2.putText(cv_image, score_text, (int(left), int(top) - 10), 
+                    cv_image = cv2.putText(cv_image, score_text, (int(left), int(top) - 10), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     
                     # 'Detect!'라는 글씨 그리기
-                    cv2.putText(cv_image, "Detect!", (int(left), int(top) - 30), 
+                    cv_image = cv2.putText(cv_image, "Detect!", (int(left), int(top) - 30), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                     
                     bird_detected = True  # 새가 감지된 것으로 설정
@@ -68,10 +68,16 @@ class BirdDetection:
             else:
                 self.trigger_pub.publish(0)  # 새가 감지되지 않은 경우, 신호를 0으로 설정
 
-            # CV2 이미지를 다시 ROS Image 메시지로 변환
-            image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
+            # CV2 이미지를 다시 ROS CompressedImage 메시지로 변환
+            _, buffer = cv2.imencode('.jpg', cv_image)
+            image_message = CompressedImage()
+            image_message.header.stamp = rospy.Time.now()
+            image_message.format = "jpeg"
+            image_message.data = np.array(buffer).tobytes()
             self.image_pub.publish(image_message)
 
+        except CvBridgeError as e:
+            rospy.logerr(f"CvBridge Error: {e}")
         except Exception as e:
             rospy.logerr(f"Callback에서 예외 발생: {e}")
 

@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>image_compressor</name>
+  <version>0.0.1</version>
+  <description>이미지 압축 패키지</description>
+  <maintainer email="you@example.com">당신의 이름</maintainer>
+  <license>BSD</license>
+
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>std_msgs</depend>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+
+  <export>
+    <build_type>catkin</build_type>
+  </export>
+</package>
+
