@@ -11,7 +11,7 @@ class BirdDetection:
     def __init__(self):
         rospy.init_node('detection_1', anonymous=True)
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber('/usb_cam/image_raw/compressed, CompressedImage, self.callback)
+        self.image_sub = rospy.Subscriber('/usb_cam/image_raw/compressed', CompressedImage, self.callback)
         self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
         self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
@@ -26,7 +26,7 @@ class BirdDetection:
     def callback(self, data):
         try:
             # 압축된 이미지를 CV2 이미지로 변환
-            np_arr = np.fromstring(data.data, np.uint8)
+            np_arr = np.frombuffer(data.data, np.uint8)
             cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
             image_np = np.array(cv_image)
             input_tensor = tf.convert_to_tensor(image_np)
@@ -87,3 +87,4 @@ class BirdDetection:
 if __name__ == '__main__':
     detector = BirdDetection()
     detector.run()
+
