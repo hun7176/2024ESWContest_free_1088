@@ -1,6 +1,6 @@
 import os
 import rospy
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Int32
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
@@ -16,6 +16,8 @@ class BirdDetection:
         self.image_sub = rospy.Subscriber('/usb_cam1/image_compressed', CompressedImage, self.callback)
         self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
         self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
+        #추가
+        self.image_pub = rospy.Publisher('/detection_1/image', Image, queue_size=10)
         self.detection_model = self.load_model()
 
         # 이미지 표시를 위한 큐와 스레드 초기화
@@ -69,6 +71,10 @@ class BirdDetection:
                 self.trigger_pub.publish(1)
             else:
                 self.trigger_pub.publish(0)
+
+            # 이미지를 ROS 이미지 메시지로 변환하여 발행(추가)
+            ros_image = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
+            self.image_pub.publish(ros_image)
 
             # 이미지 큐에 추가
             self.display_queue.put(cv_image)
