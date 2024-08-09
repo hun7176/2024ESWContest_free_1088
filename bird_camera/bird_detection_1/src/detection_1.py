@@ -13,12 +13,8 @@ class BirdDetection:
     def __init__(self):
         rospy.init_node('detection_1', anonymous=True)
         self.bridge = CvBridge()
-<<<<<<< HEAD
-        self.image_sub = rospy.Subscriber('/usb_cam/image_raw/compressed', CompressedImage, self.callback)
-        self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
-=======
         self.image_sub = rospy.Subscriber('/usb_cam1/image_compressed', CompressedImage, self.callback)
->>>>>>> 6b469d0f354f560fc172c6bcd84d059e47dbcc88
+        self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
         self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
 
