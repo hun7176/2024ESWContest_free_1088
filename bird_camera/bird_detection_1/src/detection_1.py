@@ -1,6 +1,6 @@
 import os
 import rospy
-from sensor_msgs.msg import CompressedImage, Image
+from sensor_msgs.msg import Image
 from std_msgs.msg import Int32
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
@@ -13,11 +13,9 @@ class BirdDetection:
     def __init__(self):
         rospy.init_node('detection_1', anonymous=True)
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber('/usb_cam1/image_compressed', CompressedImage, self.callback)
-        self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
-        self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
-        #추가
+        self.image_sub = rospy.Subscriber('/usb_cam1/image_raw', Image, self.callback)  # 토픽을 image_raw로 변경
         self.image_pub = rospy.Publisher('/detection_1/image', Image, queue_size=10)
+        self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
 
         # 이미지 표시를 위한 큐와 스레드 초기화
@@ -34,9 +32,8 @@ class BirdDetection:
 
     def callback(self, data):
         try:
-            # 압축된 이미지를 CV2 이미지로 변환
-            np_arr = np.frombuffer(data.data, np.uint8)
-            cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            # ROS Image 메시지를 CV2 이미지로 변환
+            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             image_resized = cv2.resize(cv_image, (320, 320))  # 모델 입력 크기에 맞게 조정
             input_tensor = tf.convert_to_tensor(image_resized)
             input_tensor = input_tensor[tf.newaxis, ...]
@@ -72,7 +69,7 @@ class BirdDetection:
             else:
                 self.trigger_pub.publish(0)
 
-            # 이미지를 ROS 이미지 메시지로 변환하여 발행(추가)
+            # 이미지를 ROS 이미지 메시지로 변환하여 발행
             ros_image = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
             self.image_pub.publish(ros_image)
 
@@ -98,4 +95,3 @@ class BirdDetection:
 if __name__ == '__main__':
     detector = BirdDetection()
     detector.run()
-

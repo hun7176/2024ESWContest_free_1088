@@ -46,7 +46,7 @@ class AutonomousVehicleNode:
     def main_loop(self):
         while not rospy.is_shutdown():
             if self.current_mode == 'driving':
-                self.twist.linear.x = 0.5  # 직진
+                self.twist.linear.x = 0.1  # 직진
                 self.twist.angular.z = 0.0
                 rospy.loginfo("Current mode: driving")
             elif self.current_mode == 'obstacle':
@@ -55,6 +55,7 @@ class AutonomousVehicleNode:
                 self.cmd_pub.publish(self.twist)
                 rospy.loginfo("Current mode: obstacle, turning")
                 self.current_mode = 'driving'
+                rospy.sleep(1)
                 continue  # 다음 루프를 바로 실행하여 정지 상태로 가지 않도록 함
             elif self.current_mode == 'shooting':
                 self.twist.linear.x = 0.0  # 정지
