@@ -35,7 +35,7 @@ class BirdDetection:
             output_dict = self.detection_model(input_tensor)
 
             # 모델 출력 처리
-            num_detections = int(output_dict['num_detections'][0])
+            num_detections = int(output_dict['num_detections'][0].numpy())
             boxes = output_dict['detection_boxes'][0].numpy()
             class_ids = output_dict['detection_classes'][0].numpy().astype(int)
             scores = output_dict['detection_scores'][0].numpy()
@@ -79,4 +79,3 @@ class BirdDetection:
 if __name__ == '__main__':
     detector = BirdDetection()
     detector.run()
-
