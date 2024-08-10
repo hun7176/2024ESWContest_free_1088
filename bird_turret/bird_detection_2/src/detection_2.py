@@ -48,13 +48,6 @@ class BirdDetector:
         model = tf.saved_model.load(model_dir)
         return model
 
-    def pid_control(self, error, prev_error, integral):
-        # PID 제어 계산
-        integral += error
-        derivative = error - prev_error
-        control = self.kp * error + self.ki * integral + self.kd * derivative
-        return control, integral
-
     def callback(self, data):
         try:
             # ROS 이미지 메시지를 OpenCV 이미지로 변환
@@ -112,13 +105,9 @@ class BirdDetector:
                     error_text = f'Error X: {error_x}, Error Y: {error_y}'
                     cv2.putText(cv_image, error_text, (10, cv_image.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-                    # PID 제어
-                    control_theta, self.integral_x = self.pid_control(error_x, self.prev_error_x, self.integral_x)
-                    control_phi, self.integral_y = self.pid_control(error_y, self.prev_error_y, self.integral_y)
-
-                    # 이전 에러 업데이트
-                    self.prev_error_x = error_x
-                    self.prev_error_y = error_y
+                    # 에러 값을 퍼블리시
+                    angle_msg.x = error_x
+                    angle_msg.y = error_y
 
                     # 물체가 중심에 가까운지 확인
                     if abs(error_x) < self.proximity_threshold and abs(error_y) < self.proximity_threshold:
@@ -137,10 +126,7 @@ class BirdDetector:
                 angle_msg.x = 0.0
                 angle_msg.y = 0.0
                 angle_msg.z = 0.0
-            else:
-                # PID 제어 결과 퍼블리시
-                angle_msg.x = control_theta
-                angle_msg.y = control_phi
+
             self.angle_pub.publish(angle_msg)
 
             # 중심에 흰색 또는 빨간색 십자 그리기
