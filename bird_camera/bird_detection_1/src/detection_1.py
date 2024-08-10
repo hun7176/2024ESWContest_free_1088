@@ -15,6 +15,7 @@ class BirdDetection:
         self.image_pub = rospy.Publisher('/detection_1/image', Image, queue_size=10)
         self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
+        self.rate = rospy.Rate(10)  # 10Hz로 메시지 처리
 
     def load_model(self):
         script_dir = os.path.dirname(__file__)
@@ -27,7 +28,9 @@ class BirdDetection:
         try:
             # ROS Image 메시지를 OpenCV 이미지로 변환
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-            image_resized = cv2.resize(cv_image, (320, 320))  # 모델 입력 크기에 맞게 조정
+            
+            # 해상도를 160x160으로 낮추어 모델 입력 크기에 맞게 조정
+            image_resized = cv2.resize(cv_image, (160, 160), interpolation=cv2.INTER_AREA)
             input_tensor = tf.convert_to_tensor(image_resized)
             input_tensor = input_tensor[tf.newaxis, ...]
 
@@ -59,14 +62,13 @@ class BirdDetection:
                     bird_detected = True
 
             # 트리거 신호 발행
-            if bird_detected:
-                self.trigger_pub.publish(1)
-            else:
-                self.trigger_pub.publish(0)
+            self.trigger_pub.publish(1 if bird_detected else 0)
 
             # 이미지를 ROS Image 메시지로 변환하여 발행
             ros_image = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
             self.image_pub.publish(ros_image)
+
+            self.rate.sleep()  # 일정한 주기로 메시지 처리
 
         except CvBridgeError as e:
             rospy.logerr(f"CvBridge Error: {e}")
