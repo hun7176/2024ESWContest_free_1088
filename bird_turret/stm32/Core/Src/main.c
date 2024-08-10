@@ -94,8 +94,8 @@ static void MX_NVIC_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint16_t dir;
-int8_t uartphierr, uartthterr;
 int8_t oper, phierr, thterr;
+int8_t uartRxData[4];
 UART_HandleTypeDef *huartn = &huart3;
 const uint8_t RES_ERR = 0, RES_DONE = 1;
 int __io_putchar(int ch) {
@@ -558,34 +558,43 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 void StartUartTask(void const *argument) {
   /* USER CODE BEGIN 5 */
 #define MOVEOP 0
-#define TRIGOP 1
-#define TUNEOP 2
+#define TRIGOP 15
   /* Infinite loop */
   for (;;) {
-    //	  taskENTER_CRITICAL();
-    HAL_UART_Receive(huartn, (uint8_t *)&uartphierr, 1, 0xffff);
-    HAL_UART_Receive(huartn, (uint8_t *)&uartthterr, 1, 0xffff);
+    // HAL_UART_Receive(huartn, (uint8_t *)&uartphierr, 1, 0xffff);
+    // HAL_UART_Receive(huartn, (uint8_t *)&uartthterr, 1, 0xffff);
+
+    // new
+    uartRxData[0] = 1, uartRxData[3] = 1;
+    while (uartRxData[0] != 0 && uartRxData[0] != 0x0f) {
+      HAL_UART_Receive(huartn, uartRxData, 1, 0xffff);
+    }
     HAL_GPIO_WritePin(GPIOG, GPIO_PIN_3, GPIO_PIN_SET);
+    HAL_UART_Receive(huartn, uartRxData + 1, 1, 0x00ff);
+    HAL_UART_Receive(huartn, uartRxData + 2, 1, 0x00ff);
+    HAL_UART_Receive(huartn, uartRxData + 3, 1, 0x00ff);
+    while (uartRxData[3] != 0xff) {
+      uartRxData[0] = uartRxData[1];
+      uartRxData[1] = uartRxData[2];
+      uartRxData[2] = uartRxData[3];
+      HAL_UART_Receive(huartn, uartRxData + 3, 1, 0x00ff);
+    }
 
     osSemaphoreWait(phiDirSemHandle, osWaitForever);
-    phierr = uartphierr;
+    phierr = uartRxData[1];
     osSemaphoreRelease(phiDirSemHandle);
     osSemaphoreWait(thetaDirSemHandle, osWaitForever);
-    thterr = uartthterr;
+    thterr = uartRxData[2];
     osSemaphoreRelease(thetaDirSemHandle);
 
-    HAL_UART_Receive(huartn, (uint8_t *)&oper, 1, 0xffff);
-    //	  taskEXIT_CRITICAL();
-    if (oper == MOVEOP) {
+    // HAL_UART_Receive(huartn, (uint8_t *)&oper, 1, 0xffff);
+    if (uartRxData[0] == MOVEOP) {
       osSemaphoreRelease(moveSemHandle);
-    } else if (oper == TRIGOP) {
+    } else if (uartRxData[0] == TRIGOP) {
       osSemaphoreRelease(triggerSemHandle);
-      HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+      // HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
       osSemaphoreWait(trigendSemHandle, osWaitForever);
-      HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
-    } else if (oper == TUNEOP) {
-      TIM2->CCR4 = 450 - 1;
-      TIM3->CCR3 = 450 - 1;
+      // HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
     }
   }
   /* USER CODE END 5 */
@@ -607,7 +616,8 @@ void StartMotorTask(void const *argument) {
   float integphi = 0.0, integtht = 0.0;
   float diffphi = 0.0, difftht = 0.0;
   float dt = 1.0 / 30;
-  float kp = .1, ki = .01, kd = .05;
+  float kpx = .1, kix = .01, kdx = .05;
+  float kpy = .1, kiy = .01, kdy = .05;
   float threshold = 50;
 
   const int BOUNDCOUNT = 30;
@@ -629,8 +639,8 @@ void StartMotorTask(void const *argument) {
     integtht += nowthterr;
     diffphi = (nowphierr - prevphierr) / dt;
     difftht = (nowthterr - prevthterr) / dt;
-    phipulse += kp * nowphierr + ki * integphi + kp * diffphi;
-    thtpulse += kp * nowthterr + ki * integtht + kp * difftht;
+    phipulse += kpx * nowphierr + kix * integphi + kpx * diffphi;
+    thtpulse += kpy * nowthterr + kiy * integtht + kpy * difftht;
 
     // check the bound
     phipulse = phipulse > PHIMIN ? phipulse : PHIMIN;
@@ -653,8 +663,8 @@ void StartMotorTask(void const *argument) {
     }
 
     // set duty cycle
-    TIM2->CCR4 = thtpulse;
-    TIM3->CCR3 = phipulse;
+    TIM3->CCR3 = thtpulse;
+    TIM3->CCR4 = phipulse;
     prevphierr = nowphierr, prevthterr = nowthterr;
   }
 }
@@ -670,12 +680,14 @@ void StartMotorTask(void const *argument) {
 /* USER CODE END Header_StartTrigTask */
 void StartTrigTask(void const *argument) {
   /* USER CODE BEGIN StartTrigTask */
-  const int DFLTPULSE = 450, TRIGPULSE = 750;
+  const int DFLTPULSE = 650, TRIGPULSE = 150;
   /* Infinite loop */
   for (;;) {
     osSemaphoreWait(triggerSemHandle, osWaitForever);
     // triggering
-    TIM3->CCR4 = TRIGPULSE;
+    TIM3->CCR1 = TRIGPULSE;
+    osDelay(50);
+    TIM3->CCR1 = DFLTPULSE;
     HAL_GPIO_WritePin(GPIOG, GPIO_PIN_3, GPIO_PIN_RESET);
     HAL_UART_Transmit(huartn, &RES_DONE, 1, HAL_MAX_DELAY);
     osSemaphoreRelease(trigendSemHandle);
