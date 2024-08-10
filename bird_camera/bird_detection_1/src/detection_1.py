@@ -29,8 +29,8 @@ class BirdDetection:
             # ROS Image 메시지를 OpenCV 이미지로 변환
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             
-            # 해상도를 160x160으로 낮추어 모델 입력 크기에 맞게 조정
-            image_resized = cv2.resize(cv_image, (160, 160), interpolation=cv2.INTER_AREA)
+    
+            image_resized = cv2.resize(cv_image, (320, 320), interpolation=cv2.INTER_AREA)
             input_tensor = tf.convert_to_tensor(image_resized)
             input_tensor = input_tensor[tf.newaxis, ...]
 
