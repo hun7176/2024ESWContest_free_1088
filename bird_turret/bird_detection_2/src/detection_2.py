@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 import os
 import rospy
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Vector3
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -16,8 +15,8 @@ class BirdDetector:
         # CvBridge 객체 생성
         self.bridge = CvBridge()
 
-        # 카메라 이미지 구독(수정 필요)
-        self.image_sub = rospy.Subscriber('/usb_cam/image_raw/compressed', Image, self.callback)
+        # 카메라 이미지 구독
+        self.image_sub = rospy.Subscriber('/usb_cam2/image_raw', Image, self.callback)
         self.image_pub = rospy.Publisher('/bird_detection_2/image_with_boxes', Image, queue_size=10)
 
         # PID 제어 결과 퍼블리셔
@@ -32,7 +31,7 @@ class BirdDetector:
         self.integral_x = 0.0
         self.integral_y = 0.0
 
-        # PID 제어 상수 (적절한 값으로 수정 필요)
+        # PID 제어 상수
         self.kp = 0.1
         self.ki = 0.01
         self.kd = 0.05
@@ -41,7 +40,7 @@ class BirdDetector:
         self.proximity_threshold = 50  # 픽셀 단위 거리
 
     def load_model(self):
-        # 모델 파일 경로 설정(수정 필요)
+        # 모델 파일 경로 설정
         script_dir = os.path.dirname(__file__)  # 현재 스크립트가 위치한 디렉토리
         model_dir = os.path.join(script_dir, '..', 'models', 'ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8', 'saved_model')
         model_dir = os.path.abspath(model_dir)
@@ -60,10 +59,10 @@ class BirdDetector:
         try:
             # ROS 이미지 메시지를 OpenCV 이미지로 변환
             cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
-
-            # TensorFlow 모델을 사용한 객체 감지
-            image_np = np.array(cv_image)
-            input_tensor = tf.convert_to_tensor(image_np)
+            
+            # 이미지 크기 조정 (모델 입력 크기)
+            image_resized = cv2.resize(cv_image, (320, 320))
+            input_tensor = tf.convert_to_tensor(image_resized)
             input_tensor = input_tensor[tf.newaxis, ...]
 
             # 객체 감지 수행
@@ -145,16 +144,19 @@ class BirdDetector:
             self.angle_pub.publish(angle_msg)
 
             # 중심에 흰색 또는 빨간색 십자 그리기
-            cv2.line(cv_image, (image_center_x - 50, image_center_y), (image_center_x + 50, image_center_y), cross_color, 2)
-            cv2.line(cv_image, (image_center_x, image_center_y - 50), (image_center_x, image_center_y + 50), cross_color, 2)
+            cv_image = cv2.line(cv_image, (image_center_x - 50, image_center_y), (image_center_x + 50, image_center_y), cross_color, 2)
+            cv_image = cv2.line(cv_image, (image_center_x, image_center_y - 50), (image_center_x, image_center_y + 50), cross_color, 2)
 
             # shoot 텍스트 표시
             if show_shoot_text:
-                cv2.putText(cv_image, 'shoot!!', (image_center_x - 100, image_center_y - 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+                cv_image = cv2.putText(cv_image, 'shoot!!', (image_center_x - 100, image_center_y - 60), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
 
+            # 이미지를 ROS 이미지 메시지로 변환하여 발행
             image_message = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
             self.image_pub.publish(image_message)
 
+        except CvBridgeError as e:
+            rospy.logerr(f"CvBridge Error: {e}")
         except Exception as e:
             rospy.logerr(f"Exception in callback: {e}")
 
@@ -164,3 +166,4 @@ class BirdDetector:
 if __name__ == '__main__':
     detector = BirdDetector()
     detector.run()
+
