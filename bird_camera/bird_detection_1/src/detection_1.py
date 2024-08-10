@@ -11,14 +11,9 @@ class BirdDetection:
     def __init__(self):
         rospy.init_node('detection_1', anonymous=True)
         self.bridge = CvBridge()
-<<<<<<< HEAD
         self.image_sub = rospy.Subscriber('/usb_cam1/image_raw', Image, self.callback)
-=======
-        self.image_sub = rospy.Subscriber('/usb_cam1/image_compressed', CompressedImage, self.callback)
-        self.image_pub = rospy.Publisher('/detection_1/image_with_boxes/compressed', CompressedImage, queue_size=10)
->>>>>>> e59c851e12c5c299f0e2cdb2fcbd1da0314d6203
-        self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.image_pub = rospy.Publisher('/detection_1/image', Image, queue_size=10)
+        self.trigger_pub = rospy.Publisher('/detection_1/is_triggered', Int32, queue_size=10)
         self.detection_model = self.load_model()
 
     def load_model(self):
@@ -30,7 +25,7 @@ class BirdDetection:
 
     def callback(self, data):
         try:
-            # ROS Image 메시지를 CV2 이미지로 변환
+            # ROS Image 메시지를 OpenCV 이미지로 변환
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             image_resized = cv2.resize(cv_image, (320, 320))  # 모델 입력 크기에 맞게 조정
             input_tensor = tf.convert_to_tensor(image_resized)
@@ -38,6 +33,8 @@ class BirdDetection:
 
             # 객체 감지 수행
             output_dict = self.detection_model(input_tensor)
+
+            # 모델 출력 처리
             num_detections = int(output_dict['num_detections'][0])
             boxes = output_dict['detection_boxes'][0].numpy()
             class_ids = output_dict['detection_classes'][0].numpy().astype(int)
@@ -82,3 +79,4 @@ class BirdDetection:
 if __name__ == '__main__':
     detector = BirdDetection()
     detector.run()
+
