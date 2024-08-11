@@ -33,8 +33,10 @@ class AutonomousVehicleNode:
         rospy.loginfo("Shooting done: %s, mode: %s", self.shooting_done, self.current_mode)
 
     def lidar_trigger_callback(self, msg):
-        if self.current_mode == 'driving' and msg.data == 1:
+        if msg.data == 1:  # 장애물 감지
             self.current_mode = 'obstacle'
+        elif msg.data == 0:  # 장애물 제거됨
+            self.current_mode = 'driving'
         rospy.loginfo("Lidar trigger received, mode: %s", self.current_mode)
 
     def detect_callback(self, msg):
@@ -54,9 +56,12 @@ class AutonomousVehicleNode:
                 self.twist.angular.z = 1.0  # 회전하여 장애물 회피
                 self.cmd_pub.publish(self.twist)
                 rospy.loginfo("Current mode: obstacle, turning")
-                self.current_mode = 'driving'
-                rospy.sleep(1)
-                continue  # 다음 루프를 바로 실행하여 정지 상태로 가지 않도록 함
+                # 장애물이 없어질 때까지 회전
+                while self.current_mode == 'obstacle':
+                    self.cmd_pub.publish(self.twist)
+                    self.rate.sleep()
+                rospy.loginfo("Obstacle cleared, switching to driving mode")
+                continue  # 장애물이 없어지면 다음 루프로 넘어감
             elif self.current_mode == 'shooting':
                 self.twist.linear.x = 0.0  # 정지
                 self.twist.angular.z = 0.0
