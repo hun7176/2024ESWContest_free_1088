@@ -69,7 +69,7 @@ class BirdDetection:
 
                 bird_detected = False
                 for i in range(num_detections):
-                    if scores[i] > 0.25 and class_ids[i] == 16:  # 'bird' 클래스 확인
+                    if scores[i] > 0.4 and class_ids[i] == 16:  # 'bird' 클래스 확인
                         box = boxes[i]
                         ymin, xmin, ymax, xmax = box
                         left, right, top, bottom = (xmin * cv_image.shape[1], xmax * cv_image.shape[1],
