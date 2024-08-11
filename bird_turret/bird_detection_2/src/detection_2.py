@@ -91,7 +91,7 @@ class BirdDetector:
 
                 # 이미지에서 감지된 새를 그리기 및 정보 추가
                 for i in range(num_detections):
-                    if scores[i] > 0.5 and class_ids[i] == bird_class_id:  # 감지 신뢰도와 클래스 ID 기준
+                    if scores[i] > 0.4 and class_ids[i] == bird_class_id:  # 감지 신뢰도와 클래스 ID 기준
                         box = boxes[i]
                         (ymin, xmin, ymax, xmax) = box
                         (left, right, top, bottom) = (xmin * cv_image.shape[1], xmax * cv_image.shape[1],
@@ -115,27 +115,27 @@ class BirdDetector:
                         error_text = f'Error X: {error_x}, Error Y: {error_y}'
                         cv_image = cv2.putText(cv_image, error_text, (10, cv_image.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-                        # 에러 값을 퍼블리시
-                        angle_msg.x = error_x
-                        angle_msg.y = error_y
+                        # 에러 값을 퍼블리시하기 전에 정수형으로 변환
+                        angle_msg.x = int(error_x)
+                        angle_msg.y = int(error_y)
 
                         # 물체가 중심에 가까운지 확인
                         if abs(error_x) < self.proximity_threshold and abs(error_y) < self.proximity_threshold:
                             cross_color = (0, 0, 255)  # 빨간색으로 변경
                             show_shoot_text = True  # shoot 텍스트 표시
-                            angle_msg.z = 1.0  # z값을 1로 설정
+                            angle_msg.z = 1  # z값을 1로 설정 (정수형)
                             rospy.loginfo("shoot!!!")
                         else:
-                            angle_msg.z = 0.0
+                            angle_msg.z = 0  # z값을 0으로 설정 (정수형)
 
                         detected = True
                         break
 
                 if not detected:
                     # 객체가 감지되지 않은 경우 제어 신호를 0으로 설정
-                    angle_msg.x = 0.0
-                    angle_msg.y = 0.0
-                    angle_msg.z = 0.0
+                    angle_msg.x = 0
+                    angle_msg.y = 0
+                    angle_msg.z = 0
 
                 self.angle_pub.publish(angle_msg)
 
@@ -162,4 +162,3 @@ class BirdDetector:
 if __name__ == '__main__':
     detector = BirdDetector()
     detector.run()
-

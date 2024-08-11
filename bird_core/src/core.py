@@ -72,11 +72,15 @@ class AutonomousVehicleNode:
         rospy.loginfo("Shooting done: %s, mode: %s", self.shooting_done, self.current_mode)
 
     def lidar_trigger_callback(self, msg):
+        if self.current_mode == 'shooting':
+            rospy.loginfo("현재 shooting 모드이므로 라이다 트리거를 무시합니다")
+            return  # shooting 모드에서는 아무 것도 하지 않음
+
         if msg.data == 1:  # 장애물 감지
             self.current_mode = 'obstacle'
         elif msg.data == 0:  # 장애물 제거됨
             self.current_mode = 'driving'
-        rospy.loginfo("Lidar trigger received, mode: %s", self.current_mode)
+        rospy.loginfo("Lidar 트리거 수신, 현재 모드: %s", self.current_mode)
 
     def detect_callback(self, msg):
         if msg.data == 1:
