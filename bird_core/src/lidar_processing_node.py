@@ -17,13 +17,13 @@ class LidarProcessingNode:
         self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
 
         # Parameters
-        self.distance_threshold = rospy.get_param('~distance_threshold', 0.3)  # 거리 임계값 (디폴트: 0.5미터)
+        self.distance_threshold = rospy.get_param('~distance_threshold', 0.5)  # 거리 임계값 (디폴트: 0.5미터)
         self.min_valid_distance = rospy.get_param('~min_valid_distance', 0.15)  # 최소 유효 거리 (디폴트: 0.3미터)
 
         # Fixed angles for detection (in radians)
         self.front_angle_min = 0.0  # 0도 (라디안)
-        self.front_angle_max = math.radians(15)  # 15도 (라디안)
-        self.rear_angle_min = math.radians(345)  # 345도 (라디안)
+        self.front_angle_max = math.radians(45)  # 15도 (라디안)
+        self.rear_angle_min = math.radians(315)  # 345도 (라디안)
         self.rear_angle_max = math.radians(360)  # 360도 (라디안)
 
     def scan_callback(self, data):
