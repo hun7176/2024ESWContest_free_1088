@@ -64,11 +64,9 @@ class AutonomousVehicleNode:
             self.detection_2_launch = None
 
     def shooting_done_callback(self, msg):
-        self.shooting_done = bool(msg.data)
-        if self.shooting_done:
-            self.current_mode = 'driving'
-            self.stop_detection_2()  # Stop detection 2 when shooting is done
-            self.start_detection_1()  # Restart detection 1
+        self.current_mode = 'driving'
+        self.stop_detection_2()  # Stop detection 2 when shooting is done
+        self.start_detection_1()  # Restart detection 1
         rospy.loginfo("Shooting done: %s, mode: %s", self.shooting_done, self.current_mode)
 
     def lidar_trigger_callback(self, msg):
