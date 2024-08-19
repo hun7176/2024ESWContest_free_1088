@@ -22,13 +22,10 @@
 ![최종모델2](./image/완성사진2(야외).jpg)
 ***
 <div style="display: flex; justify-content: space-between;">
-  <div style="width: 48%;">
-    ![작동영상1](./image/작동영상1.gif)
-  </div>
-  <div style="width: 48%;">
-    ![작동영상2](./image/작동영상2.gif)
-  </div>
+  <img src="./image/작동영상1.gif" alt="작동영상1" style="width: 48%;"/>
+  <img src="./image/작동영상2.gif" alt="작동영상2" style="width: 48%;"/>
 </div>
+
 
 ***
 ## 실행 방법
