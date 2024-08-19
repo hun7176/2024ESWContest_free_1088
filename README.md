@@ -23,67 +23,33 @@
 ***
 <div style="display: flex; justify-content: space-between;">
   <div style="width: 48%;">
-    <video controls>
-      <source src="./image/작동영상.mp4" type="video/mp4">
-      Your browser does not support the video tag.
-    </video>
+    ![작동영상1](./image/작동영상1.gif)
   </div>
   <div style="width: 48%;">
-    <video controls>
-      <source src="./image/작동영상2.mp4" type="video/mp4">
-      Your browser does not support the video tag.
-    </video>
+    ![작동영상2](./image/작동영상2.gif)
   </div>
 </div>
 
 ***
-## 주요 구성도
-```
-catkin_ws/
-├── src/
-│   ├── bird_alert/
-│   │   ├── bird_camera/
-│   │   │   ├──bird_detection/
-│   │   │   └──camera_launch/
-│   │   ├── bird_turret/
-│   │   └── bird_autodriving/
-│   └── turtlebot3/
-└── CMakeLists.txt
+## 실행 방법
+```sh
+cd ~/catkin_ws
+catkin_make
+roslaunch launch bird_alert_setup.launch
+roslaunch launch bird_alert_start.launch
 ```
 
-이런식으로 제가 지정해준 폴더 내에 여러 패키지를 만들어주시면 됩니다.
+## 실행 노드
+#### **bird_alert_setup.launch**
+ `turtlebot3_robot.launch`\
+ `usb_cam.launch`\
+ `bird_turret.launch` : `rasptostm.py`
+#### **bird_turret_start.launch**
+`bird_core.launch` : `core.py`, `lidar_processing_node.py`\
+`bird_detectkin_1.launch` : `detection_1.py`\
+`bird_detectkin_2.launch` : `detection_2.py`
 
-## 레포지토리 지정폴더
-이 레포지토리에 지정된 폴더 내에 여러분들이 작성하신 패키지들을 저장해주시길 바랍니다.
-- **규리**: `/bird_camera`
-- **승헌 기웅**: `/bird_turret`
-- **상훈 재웅**: `/bird_autodriving`
 
-이 폴더 내부에 패키지를 넣어주시면 됩니다. 그런 후에 지정폴더를 공유해주시면 됩니다.
-
-### 레포지토리 클론 및 워크스페이스 설정 방법
-
-1. `catkin_ws/src` 디렉토리로 이동합니다.
-   ```sh
-   cd ~/catkin_ws/src
-   ```
-
-2. 레포지토리를 클론합니다.
-   ```sh
-   git clone <레포지토리 URL>
-   ```
-
-3. `catkin_ws` 디렉토리로 이동합니다.
-   ```sh
-   cd ~/catkin_ws
-   ```
-
-4. `catkin_ws` 디렉토리에서 catkin 워크스페이스를 빌드합니다. (새로운 패키지를 다운받으면 이를 실행시키기 위하여 빌드를 해주어야합니다.)
-   ```sh
-   catkin_make
-   ```
-
-5. 환경 설정을 적용합니다. (여러분의 PC에 이 명령어가 bashrc에 추가되어 있을 것이기 때문에 `source ~/.bashrc` 해주어도 됩니다.)
-   ```sh
-   source devel/setup.bash
-   ```
+## 실행 노드
+![노드정리](./image/노드%20정리.jpg)
+***
