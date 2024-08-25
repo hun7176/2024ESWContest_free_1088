@@ -52,3 +52,15 @@ roslaunch launch bird_alert_start.launch
 ***
 ![노드정리2](./image/노드%20정리2.png)
 ***
+
+## 전체 도면
+![SAEDOL1](./image/SADOL1.jpg)
+***
+![SAEDOL2](./image/SADOL2.jpg)
+***
+![SAEDOL3](./image/SADOL3.jpg)
+***
+![SAEDOL4](./image/SADOL4.jpg)
+***
+![SAEDOL5](./image/SADOL5.jpg)
+***
