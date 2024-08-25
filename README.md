@@ -50,3 +50,5 @@ roslaunch launch bird_alert_start.launch
 ## 실행 노드
 ![노드정리](./image/노드%20정리.jpg)
 ***
+![노드정리2](./image/노드%20정리2.png)
+***
