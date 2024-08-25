@@ -3,5 +3,9 @@
   </node>
   <node name="lidar_processing_node" pkg="bird_core" type="lidar_processing_node.py" output="screen">
   </node>
+ <!-- <node name="model_loader" pkg="bird_detection_1" type="model_loader.py" output="screen">
+  </node>
+
+-->
 </launch>
 

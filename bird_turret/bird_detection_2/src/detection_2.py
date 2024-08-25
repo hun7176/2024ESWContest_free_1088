@@ -91,7 +91,7 @@ class BirdDetector:
 
                 # 이미지에서 감지된 새를 그리기 및 정보 추가
                 for i in range(num_detections):
-                    if scores[i] > 0.4 and class_ids[i] == bird_class_id:  # 감지 신뢰도와 클래스 ID 기준
+                    if scores[i] > 0.2 and class_ids[i] == bird_class_id:  # 감지 신뢰도와 클래스 ID 기준
                         box = boxes[i]
                         (ymin, xmin, ymax, xmax) = box
                         (left, right, top, bottom) = (xmin * cv_image.shape[1], xmax * cv_image.shape[1],

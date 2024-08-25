@@ -40,6 +40,7 @@ class AutonomousVehicleNode:
 
         # Start detection 1
         self.start_detection_1()
+        self.start_detection_2() #이거
 
     def start_detection_1(self):
         rospy.loginfo("Starting detection 1")
@@ -64,39 +65,38 @@ class AutonomousVehicleNode:
             self.detection_2_launch = None
 
     def shooting_done_callback(self, msg):
+        self.shooting_done = True
         self.current_mode = 'driving'
-        self.stop_detection_2()  # Stop detection 2 when shooting is done
-        self.start_detection_1()  # Restart detection 1
+        #self.stop_detection_2()  # Stop detection 2 when shooting is done
+        #self.start_detection_1()  # Restart detection 1
         rospy.loginfo("Shooting done: %s, mode: %s", self.shooting_done, self.current_mode)
 
     def lidar_trigger_callback(self, msg):
         if self.current_mode == 'shooting':
-            rospy.loginfo("현재 shooting 모드이므로 라이다 트리거를 무시합니다")
+            #rospy.loginfo("현재 shooting 모드이므로 라이다 트리거를 무시합니다")
             return  # shooting 모드에서는 아무 것도 하지 않음
 
         if msg.data == 1:  # 장애물 감지
             self.current_mode = 'obstacle'
         elif msg.data == 0:  # 장애물 제거됨
             self.current_mode = 'driving'
-        rospy.loginfo("Lidar 트리거 수신, 현재 모드: %s", self.current_mode)
 
     def detect_callback(self, msg):
         if msg.data == 1:
             self.current_mode = 'shooting'
             self.shooting_mode_pub.publish(Int32(data=1))  # 트리거 발행
-            self.stop_detection_1()  # Stop detection 1 before starting detection 2
-            self.start_detection_2()
-        rospy.loginfo("Detection triggered, mode: %s", self.current_mode)
+            #self.stop_detection_1()  # Stop detection 1 before starting detection 2
+            #self.start_detection_2()
 
     def main_loop(self):
         while not rospy.is_shutdown():
             if self.current_mode == 'driving':
-                self.twist.linear.x = 0.1  # 직진
+                self.twist.linear.x = 0.3  # 직진 #0.3
                 self.twist.angular.z = 0.0
                 rospy.loginfo("Current mode: driving")
             elif self.current_mode == 'obstacle':
                 self.twist.linear.x = 0.0
-                self.twist.angular.z = 1.0  # 회전하여 장애물 회피
+                self.twist.angular.z = -1.0  # 회전하여 장애물 회피
                 self.cmd_pub.publish(self.twist)
                 rospy.loginfo("Current mode: obstacle, turning")
                 # 장애물이 없어질 때까지 회전
@@ -106,12 +106,13 @@ class AutonomousVehicleNode:
                 rospy.loginfo("Obstacle cleared, switching to driving mode")
                 continue  # 장애물이 없어지면 다음 루프로 넘어감
             elif self.current_mode == 'shooting':
-                self.twist.linear.x = 0.0  # 정지
+                self.twist.linear.x = 0.15
                 self.twist.angular.z = 0.0
                 rospy.loginfo("Current mode: shooting, waiting for shooting to complete")
                 while not self.shooting_done:
                     self.cmd_pub.publish(self.twist)  # 정지 명령을 계속 유지
                     self.rate.sleep()
+                self.shooting_done = False
 
             self.cmd_pub.publish(self.twist)
             self.rate.sleep()

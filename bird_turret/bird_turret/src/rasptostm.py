@@ -2,7 +2,7 @@
 import rospy
 from geometry_msgs.msg import Point
 import serial
-from std_msgs.msg import UInt32  # 1바이트 데이터를 위한 메시지 타입
+from std_msgs.msg import Int32  # 1바이트 데이터를 위한 메시지 타입
 
 class UART_START:
     def __init__(self):
@@ -10,7 +10,7 @@ class UART_START:
         
         # 구독자 및 발행자 설정
         self.coordinate_sub = rospy.Subscriber('/bird_detection_2/angles', Point, self.callback)
-        self.shooting_done_pub = rospy.Publisher('/shooting_done', UInt32, queue_size=10)
+        self.shooting_done_pub = rospy.Publisher('/shooting_done', Int32, queue_size=10)
         
         # 시리얼 포트 설정
         self.ser = serial.Serial("/dev/ttyUSB1", baudrate=115200, timeout=1)

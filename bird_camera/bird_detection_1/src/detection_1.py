@@ -24,7 +24,7 @@ class BirdDetection:
         self.detection_model = self.load_model()
         
         # 주기 설정
-        self.frame_interval = 1.0 / 15  # 원하는 FPS (예: 15 FPS)
+        self.frame_interval = 1.0 / 4  # 원하는 FPS (예: 15 FPS)
         self.last_frame_time = time.time()
 
     def load_model(self):
@@ -69,7 +69,7 @@ class BirdDetection:
 
                 bird_detected = False
                 for i in range(num_detections):
-                    if scores[i] > 0.4 and class_ids[i] == 16:  # 'bird' 클래스 확인
+                    if scores[i] > 0.38 and class_ids[i] == 16:  # 'bird' 클래스 확인
                         box = boxes[i]
                         ymin, xmin, ymax, xmax = box
                         left, right, top, bottom = (xmin * cv_image.shape[1], xmax * cv_image.shape[1],

@@ -43,8 +43,8 @@ class LidarProcessingNode:
             # 최소 거리와 그에 해당하는 각도 찾기
             min_distance, min_angle = min(valid_ranges, key=lambda x: x[0])
 
-            rospy.loginfo("Min distance within specified angles: %f at angle: %f radians",
-                          min_distance, min_angle)
+           # rospy.loginfo("Min distance within specified angles: %f at angle: %f radians",
+            #              min_distance, min_angle)
             
             if min_distance < self.distance_threshold:
                 self.obstacle_pub.publish(Int32(data=1))
@@ -52,7 +52,7 @@ class LidarProcessingNode:
                               self.distance_threshold, min_angle)
             else:
                 self.obstacle_pub.publish(Int32(data=0))
-                rospy.loginfo("No obstacle within %f meters", self.distance_threshold)
+              #  rospy.loginfo("No obstacle within %f meters", self.distance_threshold)
         else:
             self.obstacle_pub.publish(Int32(data=0))
             rospy.loginfo("No valid distance measurements within specified angles")
