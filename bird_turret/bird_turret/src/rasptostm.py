@@ -21,9 +21,9 @@ class UART_START:
 
     def callback(self, data):
         try:
-            data.x=data.x/320*127
+            data.x=data.x/320*127 
             data.y=data.y/240*127 
-            # X, Y, Z 값을 1바이트로 변환
+            # X, Y, Z 값을 1바이트로 변환 320x240 픽셀에서 uart로 1바이트 전송하기 때문.
             x = int(data.x).to_bytes(1, 'big', signed=True)
             y = int(data.y).to_bytes(1, 'big', signed=True)
             z = int(data.z).to_bytes(1, 'big', signed=True)

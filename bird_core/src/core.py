@@ -40,7 +40,7 @@ class AutonomousVehicleNode:
 
         # Start detection 1
         self.start_detection_1()
-        self.start_detection_2() #이거
+        self.start_detection_2() 
 
     def start_detection_1(self):
         rospy.loginfo("Starting detection 1")
@@ -67,13 +67,12 @@ class AutonomousVehicleNode:
     def shooting_done_callback(self, msg):
         self.shooting_done = True
         self.current_mode = 'driving'
-        #self.stop_detection_2()  # Stop detection 2 when shooting is done
-        #self.start_detection_1()  # Restart detection 1
+        #self.stop_detection_2()  # 속도 개선 후 종료할 필요 없어짐.
+        #self.start_detection_1() 
         rospy.loginfo("Shooting done: %s, mode: %s", self.shooting_done, self.current_mode)
 
     def lidar_trigger_callback(self, msg):
         if self.current_mode == 'shooting':
-            #rospy.loginfo("현재 shooting 모드이므로 라이다 트리거를 무시합니다")
             return  # shooting 모드에서는 아무 것도 하지 않음
 
         if msg.data == 1:  # 장애물 감지
@@ -85,7 +84,7 @@ class AutonomousVehicleNode:
         if msg.data == 1:
             self.current_mode = 'shooting'
             self.shooting_mode_pub.publish(Int32(data=1))  # 트리거 발행
-            #self.stop_detection_1()  # Stop detection 1 before starting detection 2
+            #self.stop_detection_1()  # 속도 개선 후 종료할 필요 없어짐.
             #self.start_detection_2()
 
     def main_loop(self):

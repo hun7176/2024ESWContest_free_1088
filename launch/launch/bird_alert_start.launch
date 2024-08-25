@@ -2,15 +2,5 @@
     <!-- Launch bird_core -->
     <arg name="bird_core_launch" default="$(find bird_core)/launch/bird_core.launch" />
     <include file="$(arg bird_core_launch)" />
-
-    <!-- Launch bird_detection_1 -->
-    <!--<arg name="bird_detection_1_launch" default="$(find bird_detection_1)/launch/bird_detection_1.launch" />
-    <include file="$(arg bird_detection_1_launch)" />
--->
-    <!-- Launch bird_detection2
-    <arg name="bird_detection2_launch" default="$(find bird_detection_2)/launch/bird_detection_2.launch" />
-    <include file="$(arg bird_detection2_launch)" />
- 	-->
-    <!-- Launch bird_turret -->
 </launch>
 
