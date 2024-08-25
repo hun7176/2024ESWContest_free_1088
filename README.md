@@ -54,8 +54,19 @@ roslaunch launch bird_alert_start.launch
 ***
 
 ## 전체 도면
-![SAEDOL1](./image/SADOL1.jpg)
-![SAEDOL2](./image/SADOL2.jpg)
-![SAEDOL3](./image/SADOL3.jpg)
-![SAEDOL4](./image/SADOL4.jpg)
-![SAEDOL5](./image/SADOL5.jpg)
+<div style="display: flex; justify-content: space-between;">
+  <img src="./image/SADOL1.jpg" alt="saedol1" style="width: 49%;"/>
+  <img src="./image/SADOL2.jpg" alt="saedol2" style="width: 49%;"/>
+</div>
+<div style="display: flex; justify-content: space-between;">
+  <img src="./image/SADOL3.jpg" alt="saedol3" style="width: 49%;"/>
+  <img src="./image/SADOL4.jpg" alt="saedol4" style="width: 49%;"/>
+</div>
+<div style="display: flex; justify-content: space-between;">
+  <img src="./image/SADOL5.jpg" alt="saedol5" style="width: 49%;"/>
+  <img src="./image/SADOL6.jpg" alt="saedol6" style="width: 49%;"/>
+</div>
+<div style="display: flex; justify-content: space-between;">
+  <img src="./image/SADOL7.jpg" alt="saedol7" style="width: 49%;"/>
+  <img src="./image/SADOL8.jpg" alt="saedol8" style="width: 49%;"/>
+</div>
