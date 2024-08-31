@@ -10,5 +10,5 @@
 ../Core/Src/main.c:486:13:MX_USB_OTG_FS_PCD_Init	2
 ../Core/Src/main.c:518:13:MX_GPIO_Init	1
 ../Core/Src/main.c:569:6:HAL_TIM_PeriodElapsedCallback	6
-../Core/Src/main.c:595:6:HAL_UART_RxCpltCallback	7
-../Core/Src/main.c:612:6:Error_Handler	1
+../Core/Src/main.c:600:6:HAL_UART_RxCpltCallback	7
+../Core/Src/main.c:619:6:Error_Handler	1

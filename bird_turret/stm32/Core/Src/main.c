@@ -50,6 +50,7 @@ ETH_DMADescTypeDef
 
 ETH_HandleTypeDef heth;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart5;
@@ -58,14 +59,7 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 osThreadId uartTaskHandle;
-osThreadId motorTaskHandle;
-osThreadId trigTaskHandle;
-osSemaphoreId phiDirSemHandle;
-osSemaphoreId thetaDirSemHandle;
-osSemaphoreId triggerSemHandle;
-osSemaphoreId trigendSemHandle;
-osSemaphoreId moveSemHandle;
-osSemaphoreId moveendSemHandle;
+osSemaphoreId cooldownSemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -78,9 +72,8 @@ static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_UART5_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM2_Init(void);
 void StartUartTask(void const *argument);
-void StartMotorTask(void const *argument);
-void StartTrigTask(void const *argument);
 
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
@@ -89,8 +82,7 @@ static void MX_NVIC_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t dir;
-int8_t oper, phierr, thterr;
+int8_t rxbuf;
 int8_t uartRxData[4];
 UART_HandleTypeDef *huartn = &huart5;
 const uint8_t RES_ERR = 0, RES_DONE = 1;
@@ -145,6 +137,7 @@ int main(void) {
   MX_USB_OTG_FS_PCD_Init();
   MX_UART5_Init();
   MX_TIM3_Init();
+  MX_TIM2_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -153,6 +146,7 @@ int main(void) {
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+  HAL_UART_Receive_IT(huartn, &rxbuf, 1);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -160,31 +154,9 @@ int main(void) {
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* definition and creation of phiDirSem */
-  osSemaphoreDef(phiDirSem);
-  phiDirSemHandle = osSemaphoreCreate(osSemaphore(phiDirSem), 1);
-
-  /* definition and creation of thetaDirSem */
-  osSemaphoreDef(thetaDirSem);
-  thetaDirSemHandle = osSemaphoreCreate(osSemaphore(thetaDirSem), 1);
-
-  /* definition and creation of triggerSem */
-  osSemaphoreDef(triggerSem);
-  triggerSemHandle = osSemaphoreCreate(osSemaphore(triggerSem), 0);
-  // osSemaphoreWait(triggerSemHandle, 1);
-
-  /* definition and creation of trigendSem */
-  osSemaphoreDef(trigendSem);
-  trigendSemHandle = osSemaphoreCreate(osSemaphore(trigendSem), 0);
-
-  /* definition and creation of moveSem */
-  osSemaphoreDef(moveSem);
-  moveSemHandle = osSemaphoreCreate(osSemaphore(moveSem), 0);
-  // osSemaphoreWait(moveSemHandle, 1);
-
-  /* definition and creation of moveendSem */
-  osSemaphoreDef(moveendSem);
-  moveendSemHandle = osSemaphoreCreate(osSemaphore(moveendSem), 0);
+  /* definition and creation of cooldownSem */
+  osSemaphoreDef(cooldownSem);
+  cooldownSemHandle = osSemaphoreCreate(osSemaphore(cooldownSem), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -202,14 +174,6 @@ int main(void) {
   /* definition and creation of uartTask */
   osThreadDef(uartTask, StartUartTask, osPriorityNormal, 0, 128);
   uartTaskHandle = osThreadCreate(osThread(uartTask), NULL);
-
-  /* definition and creation of motorTask */
-  osThreadDef(motorTask, StartMotorTask, osPriorityNormal, 0, 128);
-  motorTaskHandle = osThreadCreate(osThread(motorTask), NULL);
-
-  /* definition and creation of trigTask */
-  osThreadDef(trigTask, StartTrigTask, osPriorityHigh, 0, 128);
-  trigTaskHandle = osThreadCreate(osThread(trigTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -283,6 +247,9 @@ static void MX_NVIC_Init(void) {
   /* USART3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(USART3_IRQn);
+  /* TIM2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
 }
 
 /**
@@ -330,6 +297,46 @@ static void MX_ETH_Init(void) {
   /* USER CODE BEGIN ETH_Init 2 */
 
   /* USER CODE END ETH_Init 2 */
+}
+
+/**
+ * @brief TIM2 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM2_Init(void) {
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 2800 - 1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 30000 - 1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 }
 
 /**
@@ -537,12 +544,92 @@ static void MX_GPIO_Init(void) {
 }
 
 /* USER CODE BEGIN 4 */
+// setmotor
+#define MOVEOP 0
+#define TRIGOP 1
+#define ENDOFDATA 2
+#define PHIMAX 750
+#define PHIMIN 150
+#define THTMAX 750
+#define THTMIN 450
+const int PHICENTER = 450 - 1, THTCENTER = 740 - 1;
+volatile int phipulse = PHICENTER, thtpulse = THTCENTER;
+volatile int cooldown = 0, received = 0;
+// volatile float prevphierr = 0.0, prevthterr = 0.0;
+// volatile float integphi = 0.0, integtht = 0.0;
+// volatile float diffphi = 0.0, difftht = 0.0;
+// const float dt = 1.0 / 30;
+const float kpx = .13, kix = .01, kdx = .05;
+const float kpy = .13, kiy = .01, kdy = .05;
+const int BOUNDCOUNT = 30;
+volatile int bounderr = BOUNDCOUNT;
+const int DFLTPULSE = 210, TRIGPULSE = 680;
+void SetMotor(int8_t nowphierr, int8_t nowthterr) {
+  // pid control
+  // integphi += nowphierr;
+  // integtht += nowthterr;
+  // diffphi = (nowphierr - prevphierr);
+  // difftht = (nowthterr - prevthterr);
+  // phipulse += kpx * nowphierr + kix * integphi + kpx * diffphi;
+  // thtpulse += kpy * nowthterr + kiy * integtht + kpy * difftht;
+  phipulse += kpx * nowphierr;
+  thtpulse += kpy * nowthterr;
+
+  // check the bound
+  // phipulse = phipulse > PHIMIN ? phipulse : PHIMIN;
+  // phipulse = phipulse < PHIMAX ? phipulse : PHIMAX;
+  // thtpulse = thtpulse > THTMIN ? thtpulse : THTMIN;
+  // thtpulse = thtpulse < THTMAX ? thtpulse : THTMAX;
+  // if (phipulse == PHIMIN || phipulse == PHIMAX || thtpulse == THTMIN ||
+  //     thtpulse == THTMAX)
+  //   bounderr--;
+  // if (!bounderr) {
+  //   phipulse = PHICENTER, thtpulse = THTCENTER;
+  //   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+  //   HAL_UART_Transmit(huartn, &RES_ERR, 1, HAL_MAX_DELAY);
+  //   bounderr = BOUNDCOUNT;
+  //   phipulse = PHICENTER, thtpulse = THTCENTER;
+  //   // prevphierr = 0.0, prevthterr = 0.0;
+  //   // integphi = 0.0, integtht = 0.0;
+  //   // diffphi = 0.0, difftht = 0.0;
+  // }
+
+  // set duty cycle
+  TIM3->CCR3 = thtpulse;
+  TIM3->CCR4 = phipulse;
+  // prevphierr = nowphierr, prevthterr = nowthterr;
+}
+
+// DoTrigger
+void DoTrigger() {
+  TIM3->CCR1 = TRIGPULSE;
+  osDelay(500);
+  TIM3->CCR1 = DFLTPULSE;
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+  osDelay(500);
+  TIM3->CCR1 = TRIGPULSE;
+  osDelay(500);
+  TIM3->CCR1 = DFLTPULSE;
+  osDelay(500);
+  bounderr = BOUNDCOUNT;
+  TIM3->CCR3 = THTCENTER, TIM3->CCR4 = PHICENTER;
+  // prevphierr = 0.0, prevthterr = 0.0;
+  // nowphierr = 0.0, nowthterr = 0.0;
+  // integphi = 0.0, integtht = 0.0;
+  // diffphi = 0.0, difftht = 0.0;
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+  HAL_UART_Transmit(huartn, &RES_DONE, 1, HAL_MAX_DELAY);
+  cooldown = 1;
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(huart);
-  /* NOTE: This function should not be modified, when the callback is needed,
-           the HAL_UART_RxCpltCallback could be implemented in the user file
-   */
+  uartRxData[0] = uartRxData[1];
+  uartRxData[1] = uartRxData[2];
+  uartRxData[2] = uartRxData[3];
+  uartRxData[3] = rxbuf;
+  if (rxbuf == ENDOFDATA)
+    received = 1;
+  HAL_UART_Receive_IT(huartn, &rxbuf, 1);
 }
 /* USER CODE END 4 */
 
@@ -555,156 +642,33 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 /* USER CODE END Header_StartUartTask */
 void StartUartTask(void const *argument) {
   /* USER CODE BEGIN 5 */
-#define MOVEOP 0
-#define TRIGOP 1
-#define ENDOFDATA 2
+  TIM3->CCR3 = THTCENTER;
+  TIM3->CCR4 = PHICENTER;
+  TIM3->CCR1 = DFLTPULSE;
   /* Infinite loop */
   for (;;) {
-    // new
-    uartRxData[0] = 100, uartRxData[3] = 100;
-
-    while (uartRxData[0] != MOVEOP && uartRxData[0] != TRIGOP) {
-      HAL_UART_Receive(huartn, uartRxData, 1, 0xffff);
+    HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_SET);
+    while (!received) {
+      osDelay(1);
     }
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
-    HAL_UART_Receive(huartn, uartRxData + 1, 1, 0x00ff);
-    HAL_UART_Receive(huartn, uartRxData + 2, 1, 0x00ff);
-    HAL_UART_Receive(huartn, uartRxData + 3, 1, 0x00ff);
-    while (uartRxData[3] != ENDOFDATA) {
-      uartRxData[0] = uartRxData[1];
-      uartRxData[1] = uartRxData[2];
-      uartRxData[2] = uartRxData[3];
-      HAL_UART_Receive(huartn, uartRxData + 3, 1, 0x00ff);
-    }
-    osSemaphoreWait(phiDirSemHandle, osWaitForever);
-    phierr = uartRxData[1];
-    osSemaphoreRelease(phiDirSemHandle);
-    osSemaphoreWait(thetaDirSemHandle, osWaitForever);
-    thterr = uartRxData[2];
-    osSemaphoreRelease(thetaDirSemHandle);
-
-    // HAL_UART_Receive(huartn, (uint8_t *)&oper, 1, 0xffff);
+    HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_RESET);
+    received = 0;
     if (uartRxData[0] == MOVEOP) {
-      osSemaphoreRelease(moveSemHandle);
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+      // SetMotor(-uartRxData[1], uartRxData[2]);
+      phipulse += kpx * (-uartRxData[1]);
+      thtpulse += kpy * uartRxData[2];
+      TIM3->CCR3 = thtpulse;
+      TIM3->CCR4 = phipulse;
     } else if (uartRxData[0] == TRIGOP) {
-      osSemaphoreRelease(triggerSemHandle);
-      // HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
-      osSemaphoreWait(trigendSemHandle, osWaitForever);
-      // HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+      DoTrigger();
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
     }
+    HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_SET);
+    HAL_Delay(1000);
+    HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_RESET);
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartMotorTask */
-/**
- * @brief Function implementing the motorTask thread.
- * @param argument: Not used
- * @retval None
- */
-const int PHICENTER = 450 - 1, THTCENTER = 650 - 1;
-int phipulse = PHICENTER, thtpulse = THTCENTER;
-float prevphierr = 0.0, prevthterr = 0.0;
-float nowphierr = 0.0, nowthterr = 0.0;
-float integphi = 0.0, integtht = 0.0;
-float diffphi = 0.0, difftht = 0.0;
-float dt = 1.0 / 30;
-float kpx = .8, kix = .01, kdx = .05;
-float kpy = .8, kiy = .01, kdy = .05;
-int bounderr;
-const int BOUNDCOUNT = 30;
-/* USER CODE END Header_StartMotorTask */
-void StartMotorTask(void const *argument) {
-  /* USER CODE BEGIN StartMotorTask */
-#define PHIMAX 750
-#define PHIMIN 150
-#define THTMAX 750
-#define THTMIN 450
-  /* Infinite loop */
-  for (;;) {
-    bounderr = BOUNDCOUNT;
-    osSemaphoreWait(moveSemHandle, osWaitForever);
-    // get error values
-    osSemaphoreWait(phiDirSemHandle, osWaitForever);
-    nowphierr = phierr;
-    osSemaphoreRelease(phiDirSemHandle);
-
-    osSemaphoreWait(thetaDirSemHandle, osWaitForever);
-    nowthterr = thterr;
-    osSemaphoreRelease(thetaDirSemHandle);
-
-    // pid control
-    integphi += nowphierr;
-    integtht += nowthterr;
-    diffphi = (nowphierr - prevphierr);
-    difftht = (nowthterr - prevthterr);
-    phipulse += kpx * nowphierr + kix * integphi + kpx * diffphi;
-    thtpulse += kpy * nowthterr + kiy * integtht + kpy * difftht;
-    // phipulse += kpx * nowphierr;
-    // thtpulse += kpy * nowthterr;
-
-    // check the bound
-    phipulse = phipulse > PHIMIN ? phipulse : PHIMIN;
-    phipulse = phipulse < PHIMAX ? phipulse : PHIMAX;
-    thtpulse = thtpulse > THTMIN ? thtpulse : THTMIN;
-    thtpulse = thtpulse < THTMAX ? thtpulse : THTMAX;
-    if (phipulse == PHIMIN || phipulse == PHIMAX || thtpulse == THTMIN ||
-        thtpulse == THTMAX)
-      bounderr--;
-    if (!bounderr) {
-      phipulse = PHICENTER, thtpulse = THTCENTER;
-      HAL_GPIO_WritePin(GPIOG, GPIO_PIN_3, GPIO_PIN_SET);
-      HAL_UART_Transmit(huartn, &RES_ERR, 1, HAL_MAX_DELAY);
-      bounderr = BOUNDCOUNT;
-      phipulse = PHICENTER, thtpulse = THTCENTER;
-      prevphierr = 0.0, prevthterr = 0.0;
-      nowphierr = 0.0, nowthterr = 0.0;
-      integphi = 0.0, integtht = 0.0;
-      diffphi = 0.0, difftht = 0.0;
-      break;
-    }
-
-    // set duty cycle
-    TIM3->CCR3 = thtpulse;
-    TIM3->CCR4 = phipulse;
-    prevphierr = nowphierr, prevthterr = nowthterr;
-  }
-  /* USER CODE END StartMotorTask */
-}
-
-/* USER CODE BEGIN Header_StartTrigTask */
-/**
- * @brief Function implementing the trigTask thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartTrigTask */
-void StartTrigTask(void const *argument) {
-  /* USER CODE BEGIN StartTrigTask */
-  const int DFLTPULSE = 270, TRIGPULSE = 700;
-  /* Infinite loop */
-  for (;;) {
-    osSemaphoreWait(triggerSemHandle, osWaitForever);
-    // triggering
-    TIM3->CCR1 = TRIGPULSE;
-    osDelay(500);
-    TIM3->CCR1 = DFLTPULSE;
-    osDelay(500);
-    TIM3->CCR1 = TRIGPULSE;
-    osDelay(500);
-    TIM3->CCR1 = DFLTPULSE;
-    osDelay(500);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-    bounderr = BOUNDCOUNT;
-    TIM3->CCR3 = THTCENTER, TIM3->CCR4 = PHICENTER;
-    prevphierr = 0.0, prevthterr = 0.0;
-    nowphierr = 0.0, nowthterr = 0.0;
-    integphi = 0.0, integtht = 0.0;
-    diffphi = 0.0, difftht = 0.0;
-    HAL_UART_Transmit(huartn, &RES_DONE, 1, HAL_MAX_DELAY);
-    osSemaphoreRelease(trigendSemHandle);
-  }
-  /* USER CODE END StartTrigTask */
 }
 
 /**
@@ -717,8 +681,11 @@ void StartTrigTask(void const *argument) {
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2) {
+    osSemaphoreWait(cooldownSemHandle, osWaitForever);
+    cooldown = 0;
+    osSemaphoreRelease(cooldownSemHandle);
+  }
   if (htim->Instance == TIM6) {
     HAL_IncTick();
   }
